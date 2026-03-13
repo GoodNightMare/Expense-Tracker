@@ -1,0 +1,104 @@
+/* ===============================
+   Modal Styles (หน้าต่างแจ้งเตือน)
+================================== */
+
+/* พื้นหลังมืดๆ กึ่งโปร่งใส และเบลอพื้นหลัง (Overlay) */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5); /* สีดำโปร่งใส 50% */
+  backdrop-filter: blur(4px); /* เอฟเฟกต์เบลอพื้นหลังหลัง Modal ให้ดูแพงขึ้น */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000; /* ทำให้ลอยอยู่ชั้นบนสุดเสมอ */
+}
+
+/* กล่องเนื้อหา Modal ที่ลอยขึ้นมา */
+.modal-content {
+  background: #ffffff;
+  padding: 30px;
+  border-radius: 16px; /* ขอบมน */
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); /* ใส่เงาให้กล่องดูลอยจากพื้น */
+  animation: popIn 0.3s ease-out; /* แอนิเมชันตอนเปิด */
+}
+
+/* ปุ่มใน Modal */
+.modal-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  flex: 1; /* ให้ปุ่มกว้างเท่าๆ กัน */
+}
+
+/* ปุ่มยกเลิก */
+.cancel-btn {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.cancel-btn:hover {
+  background-color: #d5d5d5;
+}
+
+/* ปุ่มยืนยันการลบ */
+.confirm-btn {
+  background-color: #f44336;
+  color: white;
+}
+
+.confirm-btn:hover {
+  background-color: #d32f2f;
+  box-shadow: 0 4px 10px rgba(244, 67, 54, 0.3);
+}
+
+/* แอนิเมชันให้กล่องเด้งขึ้นมาเบาๆ */
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ===============================
+   สไตล์สำหรับ Input ใน Modal
+================================== */
+.modal-input {
+  width: 100%;                  /* ให้กว้างเต็มกล่อง */
+  box-sizing: border-box;       /* ป้องกันไม่ให้ padding ดันจนล้น */
+  padding: 12px 15px;           /* เพิ่มพื้นที่ด้านในให้พิมพ์สบายตา */
+  margin-top: 10px;             /* เว้นระยะห่างจากข้อความด้านบน */
+  border: 1.5px solid #e0e0e0;  /* สีขอบแบบซอฟต์ๆ */
+  border-radius: 8px;           /* ขอบมนให้เข้ากับปุ่ม */
+  font-size: 16px;
+  color: #333;
+  background-color: #f9f9f9;    /* พื้นหลังสีเทาอ่อนให้ดูมีมิติ */
+  transition: all 0.2s ease;    /* แอนิเมชันตอนเปลี่ยนสี */
+}
+
+/* เอฟเฟกต์ตอนคลิกที่ช่อง (Focus) */
+.modal-input:focus {
+  background-color: #ffffff;    /* เปลี่ยนพื้นหลังเป็นสีขาว */
+  border-color: #f44336;        /* เปลี่ยนสีขอบเป็นสีแดงให้เข้ากับธีมลบ */
+  box-shadow: 0 0 0 4px rgba(244, 67, 54, 0.1); /* วงเรืองแสงสีแดงอ่อนๆ รอบๆ */
+  outline: none;                /* ปิดเส้นขอบสีดำของเบราว์เซอร์ */
+}
+
+/* สไตล์สำหรับ Placeholder (ข้อความจางๆ) */
+.modal-input::placeholder {
+  color: #aaa;
+}
