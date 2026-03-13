@@ -3,6 +3,7 @@ import { Routes, Route, NavLink } from 'react-router-dom'
 import axios from 'axios'
 import DailyPage from './pages/DailyPage.jsx'
 import AddPage from './pages/AddPage.jsx'
+import API_URL from './api/index.js';
 
 function App() {
   const [isAuth, setIsAuth] = useState(false);
@@ -23,7 +24,7 @@ function App() {
     e.preventDefault(); // สำคัญมาก: ป้องกันหน้าเว็บ Refresh
     try {
       // ใช้ API_URL ที่เราตั้งไว้เป็น /api
-      const response = await axios.post('/api/login', { 
+      const response = await axios.post(`${API_URL}/login`, { 
         password: inputPassword 
       });
 
