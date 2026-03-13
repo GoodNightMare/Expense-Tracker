@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "node ../Expenses-Backend/server.js",
+    "server": "cd ../Expenses-Backend && npm start",
     "start": "concurrently \"npm run server\" \"npm run dev\""
   },
   "dependencies": {
