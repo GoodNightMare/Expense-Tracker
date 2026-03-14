@@ -30,6 +30,8 @@ function DailyPage() {
   const [selectedDateData, setSelectedDateData] = useState(null); // เก็บข้อมูลวันที่ถูกคลิก
   const [summaryModal, setSummaryModal] = useState(null); // State สำหรับ Summary Modal
 
+  const today = new Date().toISOString().split("T")[0];
+
   useEffect(() => {
     fetchExpenses();
   }, []);
@@ -399,6 +401,7 @@ function DailyPage() {
             return (
               <div
                 key={day}
+                style={dateStr === today ? { border: "3px solid #000" } : {}}
                 className={`day-cell ${isWeekend ? "weekend" : ""}`}
               >
                 <span className="day-num">{day}</span>
