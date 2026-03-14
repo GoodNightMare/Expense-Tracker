@@ -268,7 +268,7 @@ function DailyPage() {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>
-                รายการวันที่ {selectedDateData.day} {thaiMonths[currentMonth]}
+                รายการวันที่ {selectedDateData.day} {thaiMonths[currentMonth]} {currentYear + 543}
               </h3>
               <button
                 className="close-btn"
@@ -764,6 +764,7 @@ function DailyPage() {
           font-size: 0.8rem;
           color: #666;
           margin-top: 2px;
+          align-self: flex-start;
         }
         .dot-inc {
           color: #27ae60;
@@ -789,6 +790,7 @@ function DailyPage() {
         .item-note {
           font-size: 0.95rem;
           color: #333;
+          align-self: flex-start;
         }
 
         /* Summary Detail Styles */
