@@ -427,7 +427,24 @@ function DailyPage() {
         <div className="card chart-box">
           <h3>📊 สัดส่วนรายจ่าย</h3>
           {expenseCategories.length > 0 ? (
-            <Pie data={pieData} />
+            <Pie data={pieData} options={{
+              plugins: {
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      const label = context.label || '';
+                      const value = context.raw || 0;
+                      const total = context.chart.getDatasetMeta(0).total;
+                      const percentage = total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%';
+                      return `${label}: ${formatNumber(value)} ฿ (${percentage})`;
+                    }
+                  }
+                },
+                legend: {
+                  position: 'bottom', // Move legend to bottom for more space
+                },
+              }
+            }} />
           ) : (
             <p>ไม่มีข้อมูลการจ่าย</p>
           )}
