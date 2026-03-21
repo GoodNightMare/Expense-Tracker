@@ -29,6 +29,7 @@ function DailyPage() {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [selectedDateData, setSelectedDateData] = useState(null); // เก็บข้อมูลวันที่ถูกคลิก
   const [summaryModal, setSummaryModal] = useState(null); // State สำหรับ Summary Modal
+  const [searchTerm, setSearchTerm] = useState(""); // State สำหรับการค้นหา
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -51,6 +52,20 @@ function DailyPage() {
     const d = new Date(exp.date);
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
+
+  // --- Logic การค้นหา ---
+  const searchedExpenses = filteredExpenses.filter((exp) => {
+    const term = searchTerm.toLowerCase();
+    const note = (exp.note || "").toLowerCase();
+    const category = (exp.category || "").toLowerCase();
+    return note.includes(term) || category.includes(term);
+  });
+
+  const highlightedDays = new Set(
+    searchTerm
+      ? searchedExpenses.map((exp) => new Date(exp.date).getDate())
+      : []
+  );
 
   // รายการที่ต้องยกเว้นไม่ให้รวมในสรุป (เช่น ค่าชาร์จรถ)
   const exclusionList = ["ชาร์จรถ"];
@@ -306,6 +321,8 @@ function DailyPage() {
         </div>
       )}
 
+      
+
       {/* 1. Month Selector & Overall Summary */}
       <div className="header-section">
         <div className="month-nav">
@@ -326,6 +343,16 @@ function DailyPage() {
           >
             ▶
           </button>
+        </div>
+
+        {/* --- Search Bar --- */}
+        <div className="search-bar">
+          <input
+            type="text"
+            placeholder="ค้นหา (หัวข้อ, คำอธิบาย)..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
 
         <div className="month-summary">
@@ -397,12 +424,12 @@ function DailyPage() {
             const dayInc = dayItems
               .filter((e) => e.type === "income")
               .reduce((s, e) => s + parseFloat(e.amount), 0);
-
+              const isHighlighted = highlightedDays.has(day);
             return (
               <div
                 key={day}
                 style={dateStr === today ? { border: "3px solid #000" } : {}}
-                className={`day-cell ${isWeekend ? "weekend" : ""}`}
+                className={`day-cell ${isWeekend ? "weekend" : ""} ${isHighlighted ? "highlighted" : ""}`}
               >
                 <span className="day-num">{day}</span>
                 <div
@@ -515,6 +542,26 @@ function DailyPage() {
           background-image: 
           radial-gradient(at 100% 100%, #e0e7ff 0, transparent 50%), 
           radial-gradient(at 0% 0%, #fef3c7 0, transparent 50%);
+        }
+
+        .search-bar {
+          text-align: center;
+          margin-bottom: 20px;
+          }
+          
+          .search-bar input {
+            background: #f9f9f9;
+          width: 50%;
+          padding: 10px;
+          border-radius: 20px;
+          border: 1px solid #ddd;
+          font-size: 1rem;
+        }
+
+        .day-cell.highlighted {
+          box-shadow: 0 0 15px rgba(253, 53, 53, 0.8);
+          border: 2px solid #fd3535;
+          transform: scale(1.05);
         }
 
         .month-summary {
