@@ -551,7 +551,7 @@ function DailyPage() {
           
           .search-bar input {
             background: #f9f9f9;
-          width: 50%;
+          width: 80%;
           padding: 10px;
           border-radius: 20px;
           border: 1px solid #ddd;
