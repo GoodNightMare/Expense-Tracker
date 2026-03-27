@@ -438,7 +438,14 @@ function DailyPage() {
                 style={dateStr === today ? { border: "3px solid #000" } : {}}
                 className={`day-cell ${isWeekend ? "weekend" : ""} ${isHighlighted ? "highlighted" : ""}`}
               >
-                {specialExpenses > 100 && <span className="star-indicator">⭐</span>}
+                {specialExpenses > 100 && (
+                  <span 
+                    className="star-indicator" 
+                    style={{ color: specialExpenses > 200 ? 'red' : 'orange' }}
+                  >
+                    ⭐
+                  </span>
+                )}
                 <span className="day-num">
                   {day}
                 </span>
@@ -653,7 +660,6 @@ function DailyPage() {
           top: 2px;
           right: 4px;
           font-size: 0.7rem;
-          color: red;
         }
         .day-cell.weekend {
           background-color: #d6d6d6;
