@@ -425,13 +425,23 @@ function DailyPage() {
               .filter((e) => e.type === "income")
               .reduce((s, e) => s + parseFloat(e.amount), 0);
               const isHighlighted = highlightedDays.has(day);
+
+            // New logic for star icon
+            const specialCategories = ["ของกิน", "ของใช้ประจำวัน", "บันเทิง"];
+            const specialExpenses = dayItems.filter(item => 
+              item.type === 'expense' && specialCategories.includes(item.category)
+            ).reduce((sum, item) => sum + parseFloat(item.amount), 0);
+
             return (
               <div
                 key={day}
                 style={dateStr === today ? { border: "3px solid #000" } : {}}
                 className={`day-cell ${isWeekend ? "weekend" : ""} ${isHighlighted ? "highlighted" : ""}`}
               >
-                <span className="day-num">{day}</span>
+                {specialExpenses > 100 && <span className="star-indicator">⭐</span>}
+                <span className="day-num">
+                  {day}
+                </span>
                 <div
                   className="day-amounts"
                   onClick={() => handleDayClick(day)}
@@ -634,8 +644,16 @@ function DailyPage() {
           display: flex;
           flex-direction: column;
           align-items: center;
+          position: relative; /* Added for star positioning */
           /* ensure contents don't overflow the rounded corners */
           overflow: hidden;
+        }
+        .star-indicator {
+          position: absolute;
+          top: 2px;
+          right: 4px;
+          font-size: 0.7rem;
+          color: red;
         }
         .day-cell.weekend {
           background-color: #d6d6d6;
@@ -694,6 +712,11 @@ function DailyPage() {
           }
           .day-amounts {
             font-size: 0.55rem;
+          }
+          .star-indicator {
+            font-size: 0.4rem;
+            top: 1px;
+            right: 2px;
           }
         }
 
