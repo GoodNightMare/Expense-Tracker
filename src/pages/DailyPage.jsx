@@ -431,6 +431,7 @@ function DailyPage() {
             const specialExpenses = dayItems.filter(item => 
               item.type === 'expense' && specialCategories.includes(item.category)
             ).reduce((sum, item) => sum + parseFloat(item.amount), 0);
+            const hasCarCharge = dayItems.some(item => item.category === 'ชาร์จรถ');
 
             return (
               <div
@@ -438,6 +439,11 @@ function DailyPage() {
                 style={dateStr === today ? { border: "3px solid #000" } : {}}
                 className={`day-cell ${isWeekend ? "weekend" : ""} ${isHighlighted ? "highlighted" : ""}`}
               >
+                {hasCarCharge && (
+                  <span className="car-indicator" style={{ position: 'absolute', top: '2px', left: '4px', fontSize: '0.7rem' }}>
+                    🚗
+                  </span>
+                )}
                 {specialExpenses > 100 && (
                   <span className="star-indicator">
                     <svg
@@ -447,7 +453,7 @@ function DailyPage() {
                       width="1em"
                       height="1em"
                     >
-                      <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                        <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 3 10.64 3 14.25 3 19.37 7.7 24 13.5 24s10.5-4.63 10.5-9.75c0-3.8-2.55-7.07-6.22-8.38-.2-.07-.38-.13-.56-.2z"/>
                     </svg>
                   </span>
                 )}
