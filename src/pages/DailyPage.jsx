@@ -76,8 +76,10 @@ function DailyPage() {
   );
 
   // เราจะใช้ค่า includedExpenses สำหรับการคำนวณทั้งหมด
-  const includedExpenses = filteredExpenses.filter((e) =>
-    !exclusionList.includes(e.category)
+  const includedExpenses = filteredExpenses.filter(
+    (e) =>
+      !exclusionList.includes(e.category) &&
+      (!e.note || !e.note.includes("(เงินสด)"))
   );
 
   // คำนวณยอดรวมของเดือนปัจจุบัน (เอาเฉพาะรายการที่ไม่ถูกยกเว้น)
