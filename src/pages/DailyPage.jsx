@@ -738,7 +738,7 @@ function DailyPage() {
             right: 2px;
           }
           .car-indicator {
-            font-size: 0.1rem;
+            font-size: 0.01rem;
             top: 1px;
             left: 2px;
           }
