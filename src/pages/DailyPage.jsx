@@ -442,7 +442,7 @@ function DailyPage() {
                 className={`day-cell ${isWeekend ? "weekend" : ""} ${isHighlighted ? "highlighted" : ""}`}
               >
                 {hasCarCharge && (
-                  <span className="car-indicator" style={{ position: 'absolute', top: '2px', left: '4px', fontSize: '0.7rem' }}>
+                  <span className="car-indicator" style={{ position: 'absolute', top: '1px', left: '1px', fontSize: '0.5rem' }}>
                     🚗
                   </span>
                 )}
@@ -669,6 +669,12 @@ function DailyPage() {
           overflow: hidden;
         }
         .star-indicator {
+          position: absolute;
+          top: 2px;
+          right: 4px;
+          font-size: 0.7rem;
+        }
+          .car-indicator {
           position: absolute;
           top: 2px;
           right: 4px;
