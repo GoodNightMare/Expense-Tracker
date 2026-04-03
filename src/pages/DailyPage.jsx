@@ -442,7 +442,7 @@ function DailyPage() {
                 className={`day-cell ${isWeekend ? "weekend" : ""} ${isHighlighted ? "highlighted" : ""}`}
               >
                 {hasCarCharge && (
-                  <span className="car-indicator" style={{ position: 'absolute', top: '2px', left: '4px', fontSize: '1em' }}>
+                  <span className="car-indicator" style={{ position: 'absolute', top: '2px', left: '4px', fontSize: '0.7rem' }}>
                     🚗
                   </span>
                 )}
@@ -736,6 +736,11 @@ function DailyPage() {
             font-size: 0.4rem;
             top: 1px;
             right: 2px;
+          }
+          .car-indicator {
+            font-size: 0.4rem;
+            top: 1px;
+            left: 2px;
           }
         }
 
