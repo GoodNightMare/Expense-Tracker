@@ -82,6 +82,45 @@ function DailyPage() {
       (!e.note || !e.note.includes("(เงินสด)"))
   );
 
+  // --- สรุปทุกเดือน ---
+  const allMonthsSummary = expenses.reduce((acc, exp) => {
+    if (
+      exclusionList.includes(exp.category) ||
+      (exp.note && exp.note.includes("(เงินสด)"))
+    ) {
+      return acc;
+    }
+
+    const d = new Date(exp.date);
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const key = `${year}-${month}`;
+
+    if (!acc[key]) {
+      acc[key] = { year, month, income: 0, expense: 0, balance: 0 };
+    }
+
+    const amount = parseFloat(exp.amount) || 0;
+    if (exp.type === "income") {
+      acc[key].income += amount;
+      acc[key].balance += amount;
+    } else if (exp.type === "expense") {
+      acc[key].expense += amount;
+      acc[key].balance -= amount;
+    }
+
+    return acc;
+  }, {});
+
+  const allMonthsList = Object.values(allMonthsSummary).sort((a, b) => {
+    if (a.year !== b.year) return b.year - a.year;
+    return b.month - a.month;
+  });
+
+  const totalAllMonthsIncome = allMonthsList.reduce((sum, m) => sum + m.income, 0);
+  const totalAllMonthsExpense = allMonthsList.reduce((sum, m) => sum + m.expense, 0);
+  const totalAllMonthsBalance = allMonthsList.reduce((sum, m) => sum + m.balance, 0);
+
   // คำนวณยอดรวมของเดือนปัจจุบัน (เอาเฉพาะรายการที่ไม่ถูกยกเว้น)
   const totalIncome = includedExpenses
     .filter((e) => e.type === "income")
@@ -549,6 +588,51 @@ function DailyPage() {
         )}
       </div>
 
+      {/* 5. All Months Summary */}
+      <div className="card" style={{ marginTop: '20px' }}>
+        <h3>📅 สรุปรายเดือนทั้งหมด</h3>
+        <div className="all-months-container">
+          {allMonthsList.length > 0 ? (
+            <div style={{ overflowX: 'auto' }}>
+              <table className="all-months-table">
+                <thead>
+                  <tr>
+                    <th>เดือน / ปี</th>
+                    <th>รายรับ</th>
+                    <th>รายจ่าย</th>
+                    <th>คงเหลือ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allMonthsList.map((m) => (
+                    <tr key={`${m.year}-${m.month}`}>
+                      <td>{thaiMonths[m.month]} {m.year + 543}</td>
+                      <td className="inc-text">+{formatNumber(m.income)}</td>
+                      <td className="exp-text">-{formatNumber(m.expense)}</td>
+                      <td style={{ fontWeight: "bold", color: m.balance < 0 ? "#e74c3c" : "#2980b9" }}>
+                        {formatNumber(m.balance)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="grand-total-row">
+                    <td>รวมทั้งหมด</td>
+                    <td className="inc-text">+{formatNumber(totalAllMonthsIncome)}</td>
+                    <td className="exp-text">-{formatNumber(totalAllMonthsExpense)}</td>
+                    <td style={{ color: totalAllMonthsBalance < 0 ? "#e74c3c" : "#2980b9" }}>
+                      {formatNumber(totalAllMonthsBalance)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          ) : (
+            <p style={{ textAlign: 'center', padding: '20px' }}>ไม่มีข้อมูล</p>
+          )}
+        </div>
+      </div>
+
       <style jsx>{`
         .daily-container {
           padding: 10px;
@@ -934,6 +1018,46 @@ function DailyPage() {
         }
         .cat-details-summary summary:hover {
           color: #2980b9;
+        }
+
+        /* All Months Summary Table Styles */
+        .all-months-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 10px;
+          font-size: 0.95rem;
+        }
+        .all-months-table th, .all-months-table td {
+          border-bottom: 1px solid #eee;
+          padding: 10px;
+          text-align: right;
+        }
+        .all-months-table th:first-child, .all-months-table td:first-child {
+          text-align: left;
+        }
+        .all-months-table th {
+          background-color: #f9f9f9;
+          font-weight: bold;
+          color: #555;
+        }
+        .all-months-table tr:hover {
+          background-color: #f5f5f5;
+        }
+        .grand-total-row {
+          background-color: #eaf2f8 !important;
+          font-weight: bold;
+          font-size: 1.05rem;
+        }
+        .grand-total-row td {
+          border-top: 2px solid #ccc;
+        }
+        @media (max-width: 768px) {
+          .all-months-table {
+            font-size: 0.85rem;
+          }
+          .all-months-table th, .all-months-table td {
+            padding: 8px 5px;
+          }
         }
       `}</style>
     </div>
