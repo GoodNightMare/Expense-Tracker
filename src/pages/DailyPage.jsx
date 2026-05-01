@@ -39,8 +39,8 @@ function DailyPage() {
 
   const fetchExpenses = async () => {
     try {
-// ต้องระบุชื่อ path ต่อท้าย เช่น /expenses
-    const response = await axios.get(`${API_URL}/expenses`);
+      // ต้องระบุชื่อ path ต่อท้าย เช่น /expenses
+      const response = await axios.get(`${API_URL}/expenses`);
       setExpenses(response.data);
     } catch (err) {
       console.error(err);
@@ -64,7 +64,7 @@ function DailyPage() {
   const highlightedDays = new Set(
     searchTerm
       ? searchedExpenses.map((exp) => new Date(exp.date).getDate())
-      : []
+      : [],
   );
 
   // รายการที่ต้องยกเว้นไม่ให้รวมในสรุป (เช่น ค่าชาร์จรถ)
@@ -72,21 +72,23 @@ function DailyPage() {
 
   // แยกข้อมูลที่ไม่เอามาคิดไว้ในอาร์เรย์เผื่อใช้งานภายหลัง
   const excludedItems = filteredExpenses.filter((e) =>
-    exclusionList.includes(e.category)
+    exclusionList.includes(e.category),
   );
 
   // เราจะใช้ค่า includedExpenses สำหรับการคำนวณทั้งหมด
   const includedExpenses = filteredExpenses.filter(
     (e) =>
       !exclusionList.includes(e.category) &&
-      (!e.note || !e.note.includes("(เงินสด)"))
+      (!e.note ||
+        (!e.note.includes("(เงินสด)") && !e.note.includes("(ไม่ต้องคิด)"))),
   );
 
   // --- สรุปทุกเดือน ---
   const allMonthsSummary = expenses.reduce((acc, exp) => {
     if (
       exclusionList.includes(exp.category) ||
-      (exp.note && exp.note.includes("(เงินสด)"))
+      (exp.note && exp.note.includes("(เงินสด)")) ||
+      exp.note.includes("(ไม่ต้องคิด)")
     ) {
       return acc;
     }
@@ -112,14 +114,34 @@ function DailyPage() {
     return acc;
   }, {});
 
-  const allMonthsList = Object.values(allMonthsSummary).sort((a, b) => {
+  const allMonthsListAsc = Object.values(allMonthsSummary).sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    return a.month - b.month;
+  });
+
+  let runningBalance = 0;
+  allMonthsListAsc.forEach((m) => {
+    m.prevCumulative = runningBalance;
+    runningBalance += m.balance;
+  });
+
+  const allMonthsList = [...allMonthsListAsc].sort((a, b) => {
     if (a.year !== b.year) return b.year - a.year;
     return b.month - a.month;
   });
 
-  const totalAllMonthsIncome = allMonthsList.reduce((sum, m) => sum + m.income, 0);
-  const totalAllMonthsExpense = allMonthsList.reduce((sum, m) => sum + m.expense, 0);
-  const totalAllMonthsBalance = allMonthsList.reduce((sum, m) => sum + m.balance, 0);
+  const totalAllMonthsIncome = allMonthsList.reduce(
+    (sum, m) => sum + m.income,
+    0,
+  );
+  const totalAllMonthsExpense = allMonthsList.reduce(
+    (sum, m) => sum + m.expense,
+    0,
+  );
+  const totalAllMonthsBalance = allMonthsList.reduce(
+    (sum, m) => sum + m.balance,
+    0,
+  );
 
   // คำนวณยอดรวมของเดือนปัจจุบัน (เอาเฉพาะรายการที่ไม่ถูกยกเว้น)
   const totalIncome = includedExpenses
@@ -207,8 +229,8 @@ function DailyPage() {
   };
 
   const formatTiny = (num) => {
-    if (num >= 10000) return (num / 1000).toFixed(1) + 'k';
-    return num.toFixed(2).replace(/\.00$/, '');
+    if (num >= 10000) return (num / 1000).toFixed(1) + "k";
+    return num.toFixed(2).replace(/\.00$/, "");
   };
 
   const handleDayClick = (day) => {
@@ -233,17 +255,21 @@ function DailyPage() {
       // หาก modal แสดงรายการวันนั้นอยู่ อัปเดตด้วย
       if (selectedDateData) {
         const updated = filteredExpenses.filter((e) => e.id !== id);
-        const dayItems = updated.filter((e) => e.date === selectedDateData.date);
-        setSelectedDateData((prev) => prev ? { ...prev, items: dayItems } : null);
+        const dayItems = updated.filter(
+          (e) => e.date === selectedDateData.date,
+        );
+        setSelectedDateData((prev) =>
+          prev ? { ...prev, items: dayItems } : null,
+        );
       }
     } catch (err) {
-      console.error('Error deleting item', err);
+      console.error("Error deleting item", err);
     }
   };
 
   // wrapper ถามยืนยันก่อนลบ
   const confirmDelete = (id) => {
-    if (window.confirm('ลบรายการนี้หรือไม่?')) {
+    if (window.confirm("ลบรายการนี้หรือไม่?")) {
       handleDeleteItem(id);
     }
   };
@@ -252,10 +278,7 @@ function DailyPage() {
     <div className="daily-container">
       {/* --- Summary Detail Modal --- */}
       {summaryModal && (
-        <div
-          className="modal-overlay"
-          onClick={() => setSummaryModal(null)}
-        >
+        <div className="modal-overlay" onClick={() => setSummaryModal(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{summaryModal.title}</h3>
@@ -272,15 +295,27 @@ function DailyPage() {
                 <div className="summary-detail">
                   <div className="summary-detail-row">
                     <span>💰 รายรับทั้งหมด</span>
-                    <span className="inc-text">+{formatNumber(totalIncome)} ฿</span>
+                    <span className="inc-text">
+                      +{formatNumber(totalIncome)} ฿
+                    </span>
                   </div>
                   <div className="summary-detail-row">
                     <span>💸 รายจ่ายทั้งหมด</span>
-                    <span className="exp-text">-{formatNumber(totalExpense)} ฿</span>
+                    <span className="exp-text">
+                      -{formatNumber(totalExpense)} ฿
+                    </span>
                   </div>
-                  <div className="summary-detail-row" style={{borderTop: "2px solid #ddd", paddingTop: "10px"}}>
-                    <span style={{fontWeight: "bold"}}>📊 คงเหลือ</span>
-                    <span style={{fontWeight: "bold", color: totalBalance < 0 ? "#e74c3c" : "#2980b9"}}>
+                  <div
+                    className="summary-detail-row"
+                    style={{ borderTop: "2px solid #ddd", paddingTop: "10px" }}
+                  >
+                    <span style={{ fontWeight: "bold" }}>📊 คงเหลือ</span>
+                    <span
+                      style={{
+                        fontWeight: "bold",
+                        color: totalBalance < 0 ? "#e74c3c" : "#2980b9",
+                      }}
+                    >
                       {formatNumber(totalBalance)} ฿
                     </span>
                   </div>
@@ -292,17 +327,25 @@ function DailyPage() {
                     <details key={i} className="cat-details-summary">
                       <summary>
                         <span>{cat.category}</span>
-                        <span className={`cat-total ${cat.type === "income" ? "inc" : "exp"}`}>{formatNumber(cat.total)} ฿</span>
+                        <span
+                          className={`cat-total ${cat.type === "income" ? "inc" : "exp"}`}
+                        >
+                          {formatNumber(cat.total)} ฿
+                        </span>
                       </summary>
                       <div className="details-content">
                         {cat.details.map((d, idx) => (
                           <div key={d.id || idx} className="detail-item">
-                            <span style={{fontSize: "0.8rem", color: "#999"}}>
+                            <span style={{ fontSize: "0.8rem", color: "#999" }}>
                               {new Date(d.date).getDate()}{" "}
-                              {thaiMonths[new Date(d.date).getMonth()].substring(0, 3)}
+                              {thaiMonths[
+                                new Date(d.date).getMonth()
+                              ].substring(0, 3)}
                             </span>
-                            <span style={{flex: 1}}>{d.note || "-"}</span>
-                            <span style={{fontWeight: "bold"}}>{formatNumber(d.amount)} ฿</span>
+                            <span style={{ flex: 1 }}>{d.note || "-"}</span>
+                            <span style={{ fontWeight: "bold" }}>
+                              {formatNumber(d.amount)} ฿
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -324,7 +367,8 @@ function DailyPage() {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>
-                รายการวันที่ {selectedDateData.day} {thaiMonths[currentMonth]} {currentYear + 543}
+                รายการวันที่ {selectedDateData.day} {thaiMonths[currentMonth]}{" "}
+                {currentYear + 543}
               </h3>
               <button
                 className="close-btn"
@@ -343,9 +387,7 @@ function DailyPage() {
                       ●
                     </span>
                     <div className="item-details">
-                      <span className="item-note">
-                        {item.note || "-"}
-                      </span>
+                      <span className="item-note">{item.note || "-"}</span>
                       <span className="item-cat">{item.category}</span>
                     </div>
                   </div>
@@ -361,8 +403,6 @@ function DailyPage() {
           </div>
         </div>
       )}
-
-      
 
       {/* 1. Month Selector & Overall Summary */}
       <div className="header-section">
@@ -397,35 +437,50 @@ function DailyPage() {
         </div>
 
         <div className="month-summary">
-          <div className="summary-card-item" onClick={() => {
-            const incomeCategories = categoryList.filter((c) => c.type === "income" && !exclusionList.includes(c.category));
-            setSummaryModal({
-              title: "📈 รายละเอียดรายรับ",
-              type: "income",
-              items: incomeCategories,
-            });
-          }}>
+          <div
+            className="summary-card-item"
+            onClick={() => {
+              const incomeCategories = categoryList.filter(
+                (c) =>
+                  c.type === "income" && !exclusionList.includes(c.category),
+              );
+              setSummaryModal({
+                title: "📈 รายละเอียดรายรับ",
+                type: "income",
+                items: incomeCategories,
+              });
+            }}
+          >
             <span className="lbl">รายรับ</span>
             <span className="val inc">+{formatNumber(totalIncome)}</span>
           </div>
-          <div className="summary-card-item" onClick={() => {
-            const expenseCategories = categoryList.filter((c) => c.type === "expense" && !exclusionList.includes(c.category));
-            setSummaryModal({
-              title: "📉 รายละเอียดรายจ่าย",
-              type: "expense",
-              items: expenseCategories,
-            });
-          }}>
+          <div
+            className="summary-card-item"
+            onClick={() => {
+              const expenseCategories = categoryList.filter(
+                (c) =>
+                  c.type === "expense" && !exclusionList.includes(c.category),
+              );
+              setSummaryModal({
+                title: "📉 รายละเอียดรายจ่าย",
+                type: "expense",
+                items: expenseCategories,
+              });
+            }}
+          >
             <span className="lbl">รายจ่าย</span>
             <span className="val exp">-{formatNumber(totalExpense)}</span>
           </div>
-          <div className="summary-card-item" onClick={() => {
-            setSummaryModal({
-              title: "💳 สรุปคงเหลือ",
-              type: "balance",
-              items: [],
-            });
-          }}>
+          <div
+            className="summary-card-item"
+            onClick={() => {
+              setSummaryModal({
+                title: "💳 สรุปคงเหลือ",
+                type: "balance",
+                items: [],
+              });
+            }}
+          >
             <span className="lbl">คงเหลือ</span>
             <span className={`val ${totalBalance < 0 ? "exp" : "bal"}`}>
               {formatNumber(totalBalance)}
@@ -454,9 +509,10 @@ function DailyPage() {
             const dayOfWeek = dayDate.getDay();
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-            const dateStr = `${currentYear}-${String(
-              currentMonth + 1,
-            ).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+            const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(
+              2,
+              "0",
+            )}-${String(day).padStart(2, "0")}`;
             const dayItems = filteredExpenses.filter((e) => e.date === dateStr);
             // ensure numeric totals and preserve decimals
             const dayExp = dayItems
@@ -465,14 +521,20 @@ function DailyPage() {
             const dayInc = dayItems
               .filter((e) => e.type === "income")
               .reduce((s, e) => s + parseFloat(e.amount), 0);
-              const isHighlighted = highlightedDays.has(day);
+            const isHighlighted = highlightedDays.has(day);
 
             // New logic for star icon
             const specialCategories = ["ของกิน", "ของใช้ประจำวัน", "บันเทิง"];
-            const specialExpenses = dayItems.filter(item => 
-              item.type === 'expense' && specialCategories.includes(item.category)
-            ).reduce((sum, item) => sum + parseFloat(item.amount), 0);
-            const hasCarCharge = dayItems.some(item => item.category === 'ชาร์จรถ');
+            const specialExpenses = dayItems
+              .filter(
+                (item) =>
+                  item.type === "expense" &&
+                  specialCategories.includes(item.category),
+              )
+              .reduce((sum, item) => sum + parseFloat(item.amount), 0);
+            const hasCarCharge = dayItems.some(
+              (item) => item.category === "ชาร์จรถ",
+            );
 
             return (
               <div
@@ -481,7 +543,15 @@ function DailyPage() {
                 className={`day-cell ${isWeekend ? "weekend" : ""} ${isHighlighted ? "highlighted" : ""}`}
               >
                 {hasCarCharge && (
-                  <span className="car-indicator" style={{ position: 'absolute', top: '1px', left: '1px', fontSize: '0.5rem' }}>
+                  <span
+                    className="car-indicator"
+                    style={{
+                      position: "absolute",
+                      top: "1px",
+                      left: "1px",
+                      fontSize: "0.5rem",
+                    }}
+                  >
                     🚗
                   </span>
                 )}
@@ -490,17 +560,15 @@ function DailyPage() {
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 24 24"
-                      fill={specialExpenses > 200 ? 'red' : 'orange'}
+                      fill={specialExpenses > 200 ? "red" : "orange"}
                       width="1em"
                       height="1em"
                     >
-                        <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 3 10.64 3 14.25 3 19.37 7.7 24 13.5 24s10.5-4.63 10.5-9.75c0-3.8-2.55-7.07-6.22-8.38-.2-.07-.38-.13-.56-.2z"/>
+                      <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 3 10.64 3 14.25 3 19.37 7.7 24 13.5 24s10.5-4.63 10.5-9.75c0-3.8-2.55-7.07-6.22-8.38-.2-.07-.38-.13-.56-.2z" />
                     </svg>
                   </span>
                 )}
-                <span className="day-num">
-                  {day}
-                </span>
+                <span className="day-num">{day}</span>
                 <div
                   className="day-amounts"
                   onClick={() => handleDayClick(day)}
@@ -523,24 +591,30 @@ function DailyPage() {
         <div className="card chart-box">
           <h3>📊 สัดส่วนรายจ่าย</h3>
           {expenseCategories.length > 0 ? (
-            <Pie data={pieData} options={{
-              plugins: {
-                tooltip: {
-                  callbacks: {
-                    label: function(context) {
-                      const label = context.label || '';
-                      const value = context.raw || 0;
-                      const total = context.chart.getDatasetMeta(0).total;
-                      const percentage = total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%';
-                      return `${label}: ${formatNumber(value)} ฿ (${percentage})`;
-                    }
-                  }
+            <Pie
+              data={pieData}
+              options={{
+                plugins: {
+                  tooltip: {
+                    callbacks: {
+                      label: function (context) {
+                        const label = context.label || "";
+                        const value = context.raw || 0;
+                        const total = context.chart.getDatasetMeta(0).total;
+                        const percentage =
+                          total > 0
+                            ? ((value / total) * 100).toFixed(1) + "%"
+                            : "0%";
+                        return `${label}: ${formatNumber(value)} ฿ (${percentage})`;
+                      },
+                    },
+                  },
+                  legend: {
+                    position: "bottom", // Move legend to bottom for more space
+                  },
                 },
-                legend: {
-                  position: 'bottom', // Move legend to bottom for more space
-                },
-              }
-            }} />
+              }}
+            />
           ) : (
             <p>ไม่มีข้อมูลการจ่าย</p>
           )}
@@ -554,12 +628,17 @@ function DailyPage() {
                 <span>
                   {cat.type === "income" ? "🟢" : "🔴"} {cat.category}
                 </span>
-                <span className={`cat-total ${cat.type === "income" ? "inc" : "exp"}`}>{formatNumber(cat.total)} ฿</span>
+                <span
+                  className={`cat-total ${cat.type === "income" ? "inc" : "exp"}`}
+                >
+                  {formatNumber(cat.total)} ฿
+                </span>
               </summary>
               <div className="details-content">
                 {cat.details.map((d) => (
-                  <div key={d.id} 
-                    className="detail-item" 
+                  <div
+                    key={d.id}
+                    className="detail-item"
                     // onClick={()=>confirmDelete(d.id)}
                   >
                     <span>
@@ -567,7 +646,9 @@ function DailyPage() {
                       {thaiMonths[currentMonth].substring(0, 3)}
                     </span>
                     <span>{d.note || "-"}</span>
-                    <span className={`amount ${d.type === "income" ? "inc-text" : "exp-text"}`}>
+                    <span
+                      className={`amount ${d.type === "income" ? "inc-text" : "exp-text"}`}
+                    >
                       {formatNumber(d.amount)}
                     </span>
                   </div>
@@ -579,21 +660,37 @@ function DailyPage() {
       </div>
 
       {/* 4. Daily Trend Chart */}
-      <div className="card" style={{ marginTop: '20px' }}>
-        <h3>📈 แนวโน้มค่าใช้จ่ายรายวัน ({thaiMonths[currentMonth]} {currentYear})</h3>
-        {filteredExpenses.filter(e => e.type === 'expense').length > 0 ? (
-            <ExpenseChart expenses={filteredExpenses.filter(e => e.type === 'expense')} />
+      <div className="card" style={{ marginTop: "20px" }}>
+        <h3>
+          📈 แนวโน้มค่าใช้จ่ายรายวัน ({thaiMonths[currentMonth]} {currentYear})
+        </h3>
+        {filteredExpenses.filter(
+          (e) =>
+            e.type === "expense" &&
+            !exclusionList.includes(e.category) &&
+            !(e.note && e.note.includes("(ไม่ต้องคิด)")), // เพิ่มบรรทัดนี้
+        ).length > 0 ? (
+          <ExpenseChart
+            expenses={filteredExpenses.filter(
+              (e) =>
+                e.type === "expense" &&
+                !exclusionList.includes(e.category) &&
+                !(e.note && e.note.includes("(ไม่ต้องคิด)")), // และบรรทัดนี้
+            )}
+          />
         ) : (
-            <p style={{textAlign: 'center', padding: '20px'}}>ไม่มีข้อมูลค่าใช้จ่ายในเดือนนี้</p>
+          <p style={{ textAlign: "center", padding: "20px" }}>
+            ไม่มีข้อมูลค่าใช้จ่ายในเดือนนี้
+          </p>
         )}
       </div>
 
       {/* 5. All Months Summary */}
-      <div className="card" style={{ marginTop: '20px' }}>
+      <div className="card" style={{ marginTop: "20px" }}>
         <h3>📅 สรุปรายเดือนทั้งหมด</h3>
         <div className="all-months-container">
           {allMonthsList.length > 0 ? (
-            <div style={{ overflowX: 'auto' }}>
+            <div style={{ overflowX: "auto" }}>
               <table className="all-months-table">
                 <thead>
                   <tr>
@@ -601,16 +698,27 @@ function DailyPage() {
                     <th>รายรับ</th>
                     <th>รายจ่าย</th>
                     <th>คงเหลือ</th>
+                    <th>เงินเก็บเดือนก่อน</th>
                   </tr>
                 </thead>
                 <tbody>
                   {allMonthsList.map((m) => (
                     <tr key={`${m.year}-${m.month}`}>
-                      <td>{thaiMonths[m.month]} {m.year + 543}</td>
+                      <td>
+                        {thaiMonths[m.month]} {m.year + 543}
+                      </td>
                       <td className="inc-text">+{formatNumber(m.income)}</td>
                       <td className="exp-text">-{formatNumber(m.expense)}</td>
-                      <td style={{ fontWeight: "bold", color: m.balance < 0 ? "#e74c3c" : "#2980b9" }}>
+                      <td
+                        style={{
+                          fontWeight: "bold",
+                          color: m.balance < 0 ? "#e74c3c" : "#2980b9",
+                        }}
+                      >
                         {formatNumber(m.balance)}
+                      </td>
+                      <td style={{ fontWeight: "bold", color: "#6e6e6e" }}>
+                        {formatNumber(m.prevCumulative)}
                       </td>
                     </tr>
                   ))}
@@ -618,17 +726,27 @@ function DailyPage() {
                 <tfoot>
                   <tr className="grand-total-row">
                     <td>รวมทั้งหมด</td>
-                    <td className="inc-text">+{formatNumber(totalAllMonthsIncome)}</td>
-                    <td className="exp-text">-{formatNumber(totalAllMonthsExpense)}</td>
-                    <td style={{ color: totalAllMonthsBalance < 0 ? "#e74c3c" : "#2980b9" }}>
+                    <td className="inc-text">
+                      +{formatNumber(totalAllMonthsIncome)}
+                    </td>
+                    <td className="exp-text">
+                      -{formatNumber(totalAllMonthsExpense)}
+                    </td>
+                    <td
+                      style={{
+                        color:
+                          totalAllMonthsBalance < 0 ? "#e74c3c" : "#2980b9",
+                      }}
+                    >
                       {formatNumber(totalAllMonthsBalance)}
                     </td>
+                    <td>-</td>
                   </tr>
                 </tfoot>
               </table>
             </div>
           ) : (
-            <p style={{ textAlign: 'center', padding: '20px' }}>ไม่มีข้อมูล</p>
+            <p style={{ textAlign: "center", padding: "20px" }}>ไม่มีข้อมูล</p>
           )}
         </div>
       </div>
@@ -647,24 +765,24 @@ function DailyPage() {
           margin-bottom: 20px;
           font-size: 1.2rem;
           color: #;
-          text-shadow: 0 0 10px rgba(255,255,255,0.2);
+          text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
           padding: 10px 20px;
           width: fit-content;
           margin: 10px auto;
           border-radius: 30px;
           background-color: #f3f4f6;
-          background-image: 
-          radial-gradient(at 100% 100%, #e0e7ff 0, transparent 50%), 
-          radial-gradient(at 0% 0%, #fef3c7 0, transparent 50%);
+          background-image:
+            radial-gradient(at 100% 100%, #e0e7ff 0, transparent 50%),
+            radial-gradient(at 0% 0%, #fef3c7 0, transparent 50%);
         }
 
         .search-bar {
           text-align: center;
           margin-bottom: 20px;
-          }
-          
-          .search-bar input {
-            background: #f9f9f9;
+        }
+
+        .search-bar input {
+          background: #f9f9f9;
           width: 80%;
           padding: 10px;
           border-radius: 20px;
@@ -689,7 +807,7 @@ function DailyPage() {
           background: white;
           padding: 10px 25px;
           border-radius: 12px;
-          box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -699,7 +817,7 @@ function DailyPage() {
         }
         .summary-card-item:hover {
           transform: translateY(-4px);
-          box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+          box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
           background: #f8f9fa;
         }
         .summary-card-item:active {
@@ -709,10 +827,19 @@ function DailyPage() {
           font-size: 0.9rem;
           color: #666;
         }
-        .summary-card-item .val { font-size: 1.2rem; font-weight: bold; }
-        .val.inc { color: #27ae60; }
-        .val.exp { color: #e74c3c; }
-        .val.bal { color: #2980b9; }
+        .summary-card-item .val {
+          font-size: 1.2rem;
+          font-weight: bold;
+        }
+        .val.inc {
+          color: #27ae60;
+        }
+        .val.exp {
+          color: #e74c3c;
+        }
+        .val.bal {
+          color: #2980b9;
+        }
 
         /* Calendar Style */
         .calendar-card {
@@ -758,7 +885,7 @@ function DailyPage() {
           right: 4px;
           font-size: 0.7rem;
         }
-          .car-indicator {
+        .car-indicator {
           position: absolute;
           top: 2px;
           right: 4px;
@@ -865,7 +992,7 @@ function DailyPage() {
           border-radius: 10px;
           margin-top: 8px;
           font-size: 0.9rem;
-          box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+          box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
         }
         .detail-item {
           display: grid;
@@ -1027,12 +1154,14 @@ function DailyPage() {
           margin-top: 10px;
           font-size: 0.95rem;
         }
-        .all-months-table th, .all-months-table td {
+        .all-months-table th,
+        .all-months-table td {
           border-bottom: 1px solid #eee;
           padding: 10px;
           text-align: right;
         }
-        .all-months-table th:first-child, .all-months-table td:first-child {
+        .all-months-table th:first-child,
+        .all-months-table td:first-child {
           text-align: left;
         }
         .all-months-table th {
@@ -1055,7 +1184,8 @@ function DailyPage() {
           .all-months-table {
             font-size: 0.85rem;
           }
-          .all-months-table th, .all-months-table td {
+          .all-months-table th,
+          .all-months-table td {
             padding: 8px 5px;
           }
         }
