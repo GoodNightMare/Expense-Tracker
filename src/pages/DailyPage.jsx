@@ -23,7 +23,7 @@ const thaiMonths = [
 
 import ExpenseChart from "../components/ExpenseChart";
 
-function DailyPage() {
+function DailyPage({ theme }) {
   const [expenses, setExpenses] = useState([]);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -36,6 +36,7 @@ function DailyPage() {
   useEffect(() => {
     fetchExpenses();
   }, []);
+
 
   const fetchExpenses = async () => {
     try {
@@ -611,6 +612,9 @@ function DailyPage() {
                   },
                   legend: {
                     position: "bottom", // Move legend to bottom for more space
+                    labels: {
+                      color: theme === "dark" ? "#e5e7eb" : "#0f172a",
+                    },
                   },
                 },
               }}
@@ -757,23 +761,26 @@ function DailyPage() {
           max-width: 1200px;
           margin: 0 auto;
           font-family: 'Prompt', 'Kanit', sans-serif;
+          background: var(--bg);
+          color: var(--text);
         }
         
         /* Typography & Colors */
         h2, h3 {
-          color: #2c3e50;
+          color: var(--heading);
           margin: 0;
         }
 
         /* --- Month Navigation --- */
         .header-section {
-          background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+          background: linear-gradient(135deg, var(--card) 0%, var(--card-2) 100%);
           border-radius: 20px;
           padding: 20px;
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+          box-shadow: var(--shadow);
           margin-bottom: 25px;
-          border: 1px solid #edf2f7;
+          border: 1px solid var(--border-soft);
         }
+        /* theme toggle moved to navbar */
         .month-nav {
           display: flex;
           align-items: center;
@@ -783,27 +790,26 @@ function DailyPage() {
           padding: 10px 20px;
           width: fit-content;
           border-radius: 50px;
-          background: #ffffff;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          background: var(--card);
+          box-shadow: var(--shadow-soft);
         }
         .month-nav button {
-          background: #f1f5f9;
+          background: var(--soft);
           border: none;
           width: 36px;
           height: 36px;
           border-radius: 50%;
           font-size: 1rem;
           cursor: pointer;
-          color: #3b82f6;
           transition: all 0.2s ease;
           display: flex;
           align-items: center;
           justify-content: center;
         }
         .month-nav button:hover {
-          background: #e0e7ff;
+          background: var(--primary-bg);
           transform: scale(1.05);
-          color: #2563eb;
+          color: var(--primary-2);
         }
         .month-nav h2 {
           min-width: 160px;
@@ -823,15 +829,19 @@ function DailyPage() {
           max-width: 500px;
           padding: 12px 20px;
           border-radius: 25px;
-          border: 1px solid #e2e8f0;
-          background: #ffffff;
+          border: 1px solid var(--border);
+          background: var(--card);
           font-size: 1rem;
           box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
           transition: border-color 0.3s, box-shadow 0.3s;
+          color: var(--text);
+        }
+        .search-bar input::placeholder {
+          color: color-mix(in oklab, var(--muted) 80%, transparent);
         }
         .search-bar input:focus {
           outline: none;
-          border-color: #3b82f6;
+          border-color: var(--primary);
           box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
@@ -843,7 +853,7 @@ function DailyPage() {
           flex-wrap: wrap;
         }
         .summary-card-item {
-          background: #ffffff;
+          background: var(--card);
           padding: 15px 20px;
           border-radius: 16px;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
@@ -855,19 +865,19 @@ function DailyPage() {
           max-width: 250px;
           cursor: pointer;
           transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-          border: 1px solid #f1f5f9;
+          border: 1px solid var(--soft);
         }
         .summary-card-item:hover {
           transform: translateY(-5px);
           box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
-          border-color: #e2e8f0;
+          border-color: var(--border);
         }
         .summary-card-item:active {
           transform: translateY(-2px);
         }
         .summary-card-item .lbl {
           font-size: 0.95rem;
-          color: #64748b;
+          color: var(--muted);
           margin-bottom: 8px;
           font-weight: 500;
         }
@@ -881,12 +891,12 @@ function DailyPage() {
 
         /* --- General Cards --- */
         .card {
-          background: #ffffff;
+          background: var(--card);
           padding: 20px;
           border-radius: 20px;
           box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
           margin-bottom: 25px;
-          border: 1px solid #f8fafc;
+          border: 1px solid var(--border-soft);
         }
         .card h3 {
           margin-bottom: 20px;
@@ -898,13 +908,13 @@ function DailyPage() {
 
         /* --- Calendar Style --- */
         .calendar-card {
-          background: #ffffff;
+          background: var(--card);
           border-radius: 20px;
           padding: 20px;
           box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
           margin-bottom: 30px;
           width: 100%;
-          border: 1px solid #f8fafc;
+          border: 1px solid var(--border-soft);
           overflow-x: auto;
         }
         .calendar-header-grid {
@@ -912,8 +922,8 @@ function DailyPage() {
           grid-template-columns: repeat(7, minmax(0, 1fr));
           text-align: center;
           font-weight: 600;
-          color: #64748b;
-          border-bottom: 2px solid #f1f5f9;
+          color: var(--muted);
+          border-bottom: 2px solid var(--soft);
           padding-bottom: 12px;
           margin-bottom: 12px;
         }
@@ -924,21 +934,19 @@ function DailyPage() {
         }
         .day-cell {
           min-height: 85px;
-          border: 1px solid #f1f5f9;
+          border: 1px solid var(--soft);
           border-radius: 12px;
           padding: 8px;
           display: flex;
           flex-direction: column;
           align-items: center;
           position: relative;
-          background: #ffffff;
+          background: var(--card);
           transition: all 0.2s ease;
           cursor: pointer;
         }
         .day-cell:hover:not(.empty) {
-          border-color: #cbd5e1;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+          transform: translateY(-5px);
         }
         .day-cell.empty {
           background: transparent;
@@ -946,7 +954,7 @@ function DailyPage() {
           cursor: default;
         }
         .day-cell.weekend {
-          background-color: #dbdbdb;
+          background-color: var(--weekend);
         }
         .day-cell.highlighted {
           box-shadow: 0 0 0 2px #ef4444;
@@ -956,7 +964,7 @@ function DailyPage() {
         .day-num {
           font-size: 1.05rem;
           font-weight: 600;
-          color: #334155;
+          color: var(--text);
           margin-bottom: 4px;
         }
         .day-amounts {
@@ -991,9 +999,16 @@ function DailyPage() {
           gap: 25px;
         }
 
+        .chart-box {
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          padding: 12px;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
         /* --- Details Style --- */
         .cat-details {
-          border-bottom: 1px solid #f1f5f9;
+          border-bottom: 1px solid var(--soft);
           padding: 12px 0;
         }
         .cat-details:last-child {
@@ -1025,12 +1040,12 @@ function DailyPage() {
           color: #dc2626;
         }
         .details-content {
-          background: #f8fafc;
+          background: color-mix(in oklab, var(--card) 86%, var(--bg));
           padding: 12px;
           border-radius: 12px;
           margin-top: 10px;
           font-size: 0.9rem;
-          border: 1px solid #f1f5f9;
+          border: 1px solid var(--soft);
         }
         .detail-item {
           display: grid;
@@ -1038,13 +1053,13 @@ function DailyPage() {
           align-items: center;
           gap: 12px;
           padding: 10px 8px;
-          border-bottom: 1px dashed #e2e8f0;
+          border-bottom: 1px dashed var(--border);
         }
         .detail-item:last-child {
           border-bottom: none;
         }
         .detail-item span:first-child {
-          color: #64748b;
+          color: var(--muted);
           font-size: 0.85rem;
           white-space: nowrap;
         }
@@ -1059,7 +1074,7 @@ function DailyPage() {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(15, 23, 42, 0.6);
+          background: var(--overlay);
           backdrop-filter: blur(4px);
           display: flex;
           align-items: center;
@@ -1073,7 +1088,7 @@ function DailyPage() {
           to { opacity: 1; }
         }
         .modal-content {
-          background: #ffffff;
+          background: var(--card);
           border-radius: 24px;
           width: 100%;
           max-width: 450px;
@@ -1091,10 +1106,10 @@ function DailyPage() {
           justify-content: space-between;
           align-items: center;
           padding: 16px 24px;
-          border-bottom: 1px solid #f1f5f9;
+          border-bottom: 1px solid var(--soft);
           position: sticky;
           top: 0;
-          background: rgba(255, 255, 255, 0.95);
+          background: color-mix(in oklab, var(--card) 92%, transparent);
           backdrop-filter: blur(8px);
           z-index: 10;
         }
@@ -1102,10 +1117,10 @@ function DailyPage() {
           font-size: 1.15rem;
           font-weight: 600;
           margin: 0;
-          color: #1e293b;
+          color: var(--text);
         }
         .close-btn {
-          background: #f1f5f9;
+          background: var(--soft);
           border: none;
           width: 32px;
           height: 32px;
@@ -1159,7 +1174,7 @@ function DailyPage() {
         .exp-text { color: #ef4444; font-weight: 700; }
         .item-note {
           font-size: 0.95rem;
-          color: #1e293b;
+          // color: #1e293b;
           font-weight: 500;
         }
 
@@ -1187,10 +1202,6 @@ function DailyPage() {
           cursor: pointer;
           font-weight: 600;
           padding: 6px 0;
-          color: #334155;
-        }
-        .cat-details-summary summary:hover {
-          color: #3b82f6;
         }
 
         /* --- All Months Summary Table Styles --- */
@@ -1216,22 +1227,15 @@ function DailyPage() {
           text-align: left;
         }
         .all-months-table th {
-          background-color: #f8fafc;
           font-weight: 600;
-          color: #475569;
           text-transform: uppercase;
           font-size: 0.85rem;
           letter-spacing: 0.05em;
         }
-        .all-months-table tr:hover:not(.grand-total-row) {
-          background-color: #f1f5f9;
-        }
         .grand-total-row td {
           border-top: 2px solid #cbd5e1;
-          color: #1e293b;
           font-weight: 700;
           font-size: 1.05rem;
-          background-color: #f8fafc;
         }
 
         /* --- Responsive Adjustments --- */
