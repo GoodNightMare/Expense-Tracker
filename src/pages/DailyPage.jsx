@@ -183,18 +183,22 @@ function DailyPage({ theme }) {
 
   // แยกเฉพาะรายจ่ายไปทำกราฟ
   const expenseCategories = categoryList.filter((c) => c.type === "expense");
+  const incomeCategories = categoryList.filter((c) => c.type === "income");
 
   // ข้อมูลกราฟ (เฉพาะรายจ่าย)
   // generate a palette large enough to avoid duplicate colors
   const generateColors = (count) => {
     const base = [
-      "#FF6384",
-      "#36A2EB",
-      "#FFCE56",
-      "#4BC0C0",
-      "#9966FF",
-      "#FF9F40",
-      "#C9CBCF",
+      "#3B82F6", // blue
+      "#22C55E", // green
+      "#F97316", // orange
+      "#EF4444", // red
+      "#A855F7", // purple
+      "#14B8A6", // teal
+      "#EAB308", // yellow
+      "#F43F5E", // rose
+      "#0EA5E9", // sky
+      "#84CC16", // lime
     ];
     const colors = [];
     for (let i = 0; i < count; i++) {
@@ -203,11 +207,13 @@ function DailyPage({ theme }) {
       } else {
         // evenly spaced hues for additional categories
         const hue = Math.round((i * 360) / count);
-        colors.push(`hsl(${hue}, 70%, 50%)`);
+        colors.push(`hsl(${hue}, 72%, 52%)`);
       }
     }
     return colors;
   };
+
+  const pieBorderColor = theme === "dark" ? "#0f172a" : "#ffffff";
 
   const pieData = {
     labels: expenseCategories.map((c) => c.category),
@@ -215,6 +221,22 @@ function DailyPage({ theme }) {
       {
         data: expenseCategories.map((c) => c.total),
         backgroundColor: generateColors(expenseCategories.length),
+        borderColor: pieBorderColor,
+        borderWidth: 2,
+        hoverOffset: 6,
+      },
+    ],
+  };
+
+  const incomePieData = {
+    labels: incomeCategories.map((c) => c.category),
+    datasets: [
+      {
+        data: incomeCategories.map((c) => c.total),
+        backgroundColor: generateColors(incomeCategories.length),
+        borderColor: pieBorderColor,
+        borderWidth: 2,
+        hoverOffset: 6,
       },
     ],
   };
@@ -622,6 +644,41 @@ function DailyPage({ theme }) {
           ) : (
             <p>ไม่มีข้อมูลการจ่าย</p>
           )}
+
+          <div className="chart-divider" />
+
+          <h3>📈 สัดส่วนรายรับ</h3>
+          {incomeCategories.length > 0 ? (
+            <Pie
+              data={incomePieData}
+              options={{
+                plugins: {
+                  tooltip: {
+                    callbacks: {
+                      label: function (context) {
+                        const label = context.label || "";
+                        const value = context.raw || 0;
+                        const total = context.chart.getDatasetMeta(0).total;
+                        const percentage =
+                          total > 0
+                            ? ((value / total) * 100).toFixed(1) + "%"
+                            : "0%";
+                        return `${label}: ${formatNumber(value)} ฿ (${percentage})`;
+                      },
+                    },
+                  },
+                  legend: {
+                    position: "bottom",
+                    labels: {
+                      color: theme === "dark" ? "#e5e7eb" : "#0f172a",
+                    },
+                  },
+                },
+              }}
+            />
+          ) : (
+            <p>ไม่มีข้อมูลรายรับ</p>
+          )}
         </div>
 
         <div className="card detail-box">
@@ -1004,6 +1061,12 @@ function DailyPage({ theme }) {
           border-radius: 12px;
           padding: 12px;
           box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .chart-divider {
+          height: 1px;
+          width: 100%;
+          background: var(--soft);
+          margin: 16px 0;
         }
 
         /* --- Details Style --- */
