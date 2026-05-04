@@ -753,335 +753,391 @@ function DailyPage() {
 
       <style jsx>{`
         .daily-container {
-          padding: 10px;
-          max-width: 1000px;
-          margin: auto;
+          padding: 20px 10px;
+          max-width: 1200px;
+          margin: 0 auto;
+          font-family: 'Prompt', 'Kanit', sans-serif;
+        }
+        
+        /* Typography & Colors */
+        h2, h3 {
+          color: #2c3e50;
+          margin: 0;
+        }
+
+        /* --- Month Navigation --- */
+        .header-section {
+          background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+          border-radius: 20px;
+          padding: 20px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+          margin-bottom: 25px;
+          border: 1px solid #edf2f7;
         }
         .month-nav {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 20px;
-          margin-bottom: 20px;
-          font-size: 1.2rem;
-          color: #;
-          text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+          gap: 15px;
+          margin: 0 auto 20px auto;
           padding: 10px 20px;
           width: fit-content;
-          margin: 10px auto;
-          border-radius: 30px;
-          background-color: #f3f4f6;
-          background-image:
-            radial-gradient(at 100% 100%, #e0e7ff 0, transparent 50%),
-            radial-gradient(at 0% 0%, #fef3c7 0, transparent 50%);
+          border-radius: 50px;
+          background: #ffffff;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
         }
-
-        .search-bar {
-          text-align: center;
-          margin-bottom: 20px;
-        }
-
-        .search-bar input {
-          background: #f9f9f9;
-          width: 80%;
-          padding: 10px;
-          border-radius: 20px;
-          border: 1px solid #ddd;
+        .month-nav button {
+          background: #f1f5f9;
+          border: none;
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
           font-size: 1rem;
+          cursor: pointer;
+          color: #3b82f6;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
-
-        .day-cell.highlighted {
-          box-shadow: 0 0 15px rgba(253, 53, 53, 0.8);
-          border: 2px solid #fd3535;
+        .month-nav button:hover {
+          background: #e0e7ff;
           transform: scale(1.05);
+          color: #2563eb;
+        }
+        .month-nav h2 {
+          min-width: 160px;
+          text-align: center;
+          font-size: 1.4rem;
+          font-weight: 600;
         }
 
+        /* --- Search Bar --- */
+        .search-bar {
+          display: flex;
+          justify-content: center;
+          margin-bottom: 25px;
+        }
+        .search-bar input {
+          width: 100%;
+          max-width: 500px;
+          padding: 12px 20px;
+          border-radius: 25px;
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
+          font-size: 1rem;
+          box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+          transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .search-bar input:focus {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* --- Month Summary Cards --- */
         .month-summary {
           display: flex;
           justify-content: center;
-          gap: 15px;
-          margin-bottom: 20px;
+          gap: 20px;
           flex-wrap: wrap;
         }
         .summary-card-item {
-          background: white;
-          padding: 10px 25px;
-          border-radius: 12px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+          background: #ffffff;
+          padding: 15px 20px;
+          border-radius: 16px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
           display: flex;
           flex-direction: column;
           align-items: center;
-          min-width: 120px;
+          flex: 1;
+          min-width: 140px;
+          max-width: 250px;
           cursor: pointer;
-          transition: all 0.3s ease;
+          transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          border: 1px solid #f1f5f9;
         }
         .summary-card-item:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
-          background: #f8f9fa;
+          transform: translateY(-5px);
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+          border-color: #e2e8f0;
         }
         .summary-card-item:active {
           transform: translateY(-2px);
         }
         .summary-card-item .lbl {
-          font-size: 0.9rem;
-          color: #666;
+          font-size: 0.95rem;
+          color: #64748b;
+          margin-bottom: 8px;
+          font-weight: 500;
         }
         .summary-card-item .val {
+          font-size: 1.4rem;
+          font-weight: 700;
+        }
+        .val.inc { color: #10b981; }
+        .val.exp { color: #ef4444; }
+        .val.bal { color: #3b82f6; }
+
+        /* --- General Cards --- */
+        .card {
+          background: #ffffff;
+          padding: 20px;
+          border-radius: 20px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+          margin-bottom: 25px;
+          border: 1px solid #f8fafc;
+        }
+        .card h3 {
+          margin-bottom: 20px;
           font-size: 1.2rem;
-          font-weight: bold;
-        }
-        .val.inc {
-          color: #27ae60;
-        }
-        .val.exp {
-          color: #e74c3c;
-        }
-        .val.bal {
-          color: #2980b9;
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
 
-        /* Calendar Style */
+        /* --- Calendar Style --- */
         .calendar-card {
-          background: white;
-          border-radius: 12px;
-          padding: 10px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          margin-bottom: 20px;
-          /* allow the calendar to shrink on narrow screens */
+          background: #ffffff;
+          border-radius: 20px;
+          padding: 20px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+          margin-bottom: 30px;
           width: 100%;
+          border: 1px solid #f8fafc;
           overflow-x: auto;
         }
         .calendar-header-grid {
           display: grid;
           grid-template-columns: repeat(7, minmax(0, 1fr));
           text-align: center;
-          font-weight: bold;
-          border-bottom: 1px solid #eee;
-          padding-bottom: 5px;
-          /* font-size will adjust in media queries */
+          font-weight: 600;
+          color: #64748b;
+          border-bottom: 2px solid #f1f5f9;
+          padding-bottom: 12px;
+          margin-bottom: 12px;
         }
         .calendar-grid {
           display: grid;
           grid-template-columns: repeat(7, minmax(0, 1fr));
-          gap: 5px;
-          margin-top: 10px;
+          gap: 8px;
         }
         .day-cell {
-          min-height: 60px;
-          border: 2px solid #f0f0f0;
-          border-radius: 6px;
-          padding: 4px;
+          min-height: 85px;
+          border: 1px solid #f1f5f9;
+          border-radius: 12px;
+          padding: 8px;
           display: flex;
           flex-direction: column;
           align-items: center;
-          position: relative; /* Added for star positioning */
-          /* ensure contents don't overflow the rounded corners */
-          overflow: hidden;
+          position: relative;
+          background: #ffffff;
+          transition: all 0.2s ease;
+          cursor: pointer;
         }
-        .star-indicator {
-          position: absolute;
-          top: 2px;
-          right: 4px;
-          font-size: 0.7rem;
+        .day-cell:hover:not(.empty) {
+          border-color: #cbd5e1;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
-        .car-indicator {
-          position: absolute;
-          top: 2px;
-          right: 4px;
-          font-size: 0.7rem;
+        .day-cell.empty {
+          background: transparent;
+          border: none;
+          cursor: default;
         }
         .day-cell.weekend {
-          background-color: #d6d6d6;
+          background-color: #dbdbdb;
+        }
+        .day-cell.highlighted {
+          box-shadow: 0 0 0 2px #ef4444;
+          transform: scale(1.02);
+          z-index: 1;
         }
         .day-num {
-          font-size: 0.9rem;
-          font-weight: bold;
-          color: #555;
-          max-width: 100%;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          font-size: 1.05rem;
+          font-weight: 600;
+          color: #334155;
+          margin-bottom: 4px;
         }
         .day-amounts {
           display: flex;
           flex-direction: column;
-          font-size: 0.65rem;
+          gap: 4px;
+          font-size: 0.75rem;
           width: 100%;
           text-align: center;
+          font-weight: 600;
         }
-        .inc-tiny {
-          color: #27ae60;
+        .inc-tiny { color: #059669; background: #d1fae5; border-radius: 6px; padding: 2px 4px; }
+        .exp-tiny { color: #dc2626; background: #fee2e2; border-radius: 6px; padding: 2px 4px; }
+
+        .star-indicator {
+          position: absolute;
+          top: 6px;
+          right: 6px;
+          font-size: 0.9rem;
         }
-        .exp-tiny {
-          color: #e74c3c;
+        .car-indicator {
+          position: absolute;
+          top: 6px;
+          left: 6px;
+          font-size: 0.9rem;
         }
 
-        /* Responsive Analysis Grid */
+        /* --- Responsive Analysis Grid --- */
         .analysis-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-        }
-        @media (max-width: 768px) {
-          .analysis-grid {
-            grid-template-columns: 1fr;
-          }
-          .day-cell {
-            min-height: 50px;
-          }
-          /* responsive calendar adjustments */
-          .calendar-card {
-            padding: 5px;
-          }
-          .calendar-header-grid {
-            font-size: 0.8rem;
-          }
-          .calendar-grid {
-            gap: 3px;
-          }
-          .day-cell {
-            min-height: 45px;
-          }
-          .day-num {
-            font-size: 0.75rem;
-          }
-          .day-amounts {
-            font-size: 0.55rem;
-          }
-          .star-indicator {
-            font-size: 0.4rem;
-            top: 1px;
-            right: 2px;
-          }
-          .car-indicator {
-            font-size: 0.01rem;
-            top: 1px;
-            left: 2px;
-          }
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 25px;
         }
 
-        /* Details Style */
+        /* --- Details Style --- */
         .cat-details {
-          border-bottom: 1px solid #eee;
-          padding: 10px 0;
+          border-bottom: 1px solid #f1f5f9;
+          padding: 12px 0;
+        }
+        .cat-details:last-child {
+          border-bottom: none;
         }
         summary {
           display: flex;
           justify-content: space-between;
+          align-items: center;
           cursor: pointer;
           font-weight: 500;
+          padding: 6px 0;
+        }
+        summary::-webkit-details-marker {
+          display: none;
         }
         .cat-total {
-          font-weight: bold;
-          padding: 2px 8px;
-          border-radius: 12px;
+          font-weight: 700;
+          padding: 4px 12px;
+          border-radius: 20px;
           font-size: 0.9rem;
         }
         .cat-total.inc {
-          background: #e6f9e6;
-          color: #27ae60;
+          background: #d1fae5;
+          color: #059669;
         }
         .cat-total.exp {
-          background: #fde6e6;
-          color: #e74c3c;
+          background: #fee2e2;
+          color: #dc2626;
         }
         .details-content {
-          background: #f9f9f9;
-          padding: 12px 16px;
-          border-radius: 10px;
-          margin-top: 8px;
+          background: #f8fafc;
+          padding: 12px;
+          border-radius: 12px;
+          margin-top: 10px;
           font-size: 0.9rem;
-          box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+          border: 1px solid #f1f5f9;
         }
         .detail-item {
           display: grid;
-          /* add extra column for delete button */
-          grid-template-columns: auto 1fr auto auto;
+          grid-template-columns: auto 1fr auto;
           align-items: center;
-          gap: 10px;
-          padding: 8px 4px;
-          border-bottom: 1px solid #e0e0e0;
-          border-radius: 6px;
+          gap: 12px;
+          padding: 10px 8px;
+          border-bottom: 1px dashed #e2e8f0;
         }
         .detail-item:last-child {
           border-bottom: none;
         }
-        .detail-item:nth-child(odd) {
-          background: #ffffff;
-        }
-        .detail-item:nth-child(even) {
-          background: #f7f7f7;
-        }
         .detail-item span:first-child {
-          color: #555;
-          font-weight: 500;
+          color: #64748b;
+          font-size: 0.85rem;
+          white-space: nowrap;
         }
-        /* override amount colors in category breakdown so they stand out */
-        .detail-item .inc-text {
-          color: #27ae60;
-          font-weight: 600;
-        }
-        .detail-item .exp-text {
-          color: #e74c3c;
-          font-weight: 600;
-        }
-        .detail-item span:last-child {
-          text-align: right;
-        }
+        .detail-item .amount { font-weight: 600; text-align: right; }
+        .detail-item .inc-text { color: #10b981; }
+        .detail-item .exp-text { color: #ef4444; }
 
-        .card {
-          background: white;
-          padding: 15px;
-          border-radius: 12px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Modal Styles */
+        /* --- Modal Styles --- */
         .modal-overlay {
           position: fixed;
           top: 0;
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
+          background: rgba(15, 23, 42, 0.6);
+          backdrop-filter: blur(4px);
           display: flex;
           align-items: center;
           justify-content: center;
           z-index: 1000;
           padding: 20px;
+          animation: fadeIn 0.2s ease-out;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
         .modal-content {
-          background: white;
-          border-radius: 15px;
+          background: #ffffff;
+          border-radius: 24px;
           width: 100%;
-          max-width: 400px;
-          max-height: 80vh;
+          max-width: 450px;
+          max-height: 85vh;
           overflow-y: auto;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+          animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         .modal-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 15px 20px;
-          border-bottom: 1px solid #eee;
+          padding: 16px 24px;
+          border-bottom: 1px solid #f1f5f9;
           position: sticky;
           top: 0;
-          background: white;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(8px);
+          z-index: 10;
+        }
+        .modal-header h3 {
+          font-size: 1.15rem;
+          font-weight: 600;
+          margin: 0;
+          color: #1e293b;
+        }
+        .close-btn {
+          background: #f1f5f9;
+          border: none;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 20px;
+          cursor: pointer;
+          color: #64748b;
+          transition: background 0.2s, color 0.2s;
+        }
+        .close-btn:hover {
+          background: #e2e8f0;
+          color: #0f172a;
         }
         .modal-body {
-          padding: 10px 20px;
+          padding: 16px 24px;
         }
         .modal-item {
           display: flex;
           justify-content: space-between;
-          padding: 12px 0;
-          border-bottom: 1px solid #f9f9f9;
+          align-items: center;
+          padding: 14px 0;
+          border-bottom: 1px dashed #f1f5f9;
+        }
+        .modal-item:last-child {
+          border-bottom: none;
         }
         .item-main {
           display: flex;
-          gap: 10px;
+          gap: 12px;
           align-items: center;
         }
         .item-details {
@@ -1090,103 +1146,212 @@ function DailyPage() {
         }
         .item-cat {
           font-size: 0.8rem;
-          color: #666;
-          margin-top: 2px;
-          align-self: flex-start;
+          color: #64748b;
+          background: #f1f5f9;
+          padding: 2px 8px;
+          border-radius: 10px;
+          width: fit-content;
+          margin-top: 4px;
         }
-        .dot-inc {
-          color: #27ae60;
-        }
-        .dot-exp {
-          color: #e74c3c;
-        }
-        .inc-text {
-          color: #27ae60;
-          font-weight: bold;
-        }
-        .exp-text {
-          color: #e74c3c;
-          font-weight: bold;
-        }
-        .close-btn {
-          background: none;
-          border: none;
-          font-size: 24px;
-          cursor: pointer;
-          color: #888;
-        }
+        .dot-inc { color: #10b981; font-size: 1.2rem; }
+        .dot-exp { color: #ef4444; font-size: 1.2rem; }
+        .inc-text { color: #10b981; font-weight: 700; }
+        .exp-text { color: #ef4444; font-weight: 700; }
         .item-note {
           font-size: 0.95rem;
-          color: #333;
-          align-self: flex-start;
+          color: #1e293b;
+          font-weight: 500;
         }
 
-        /* Summary Detail Styles */
+        /* --- Summary Detail Styles --- */
         .summary-detail {
           padding: 10px 0;
         }
         .summary-detail-row {
           display: flex;
           justify-content: space-between;
-          padding: 12px 0;
-          border-bottom: 1px dashed #eee;
-          font-size: 1rem;
+          padding: 14px 0;
+          border-bottom: 1px dashed #e2e8f0;
+          font-size: 1.05rem;
+        }
+        .summary-detail-row:last-child {
+          border-bottom: none;
         }
         .cat-details-summary {
-          border-bottom: 1px solid #eee;
-          padding: 10px 0;
+          border-bottom: 1px solid #f1f5f9;
+          padding: 12px 0;
         }
         .cat-details-summary summary {
           display: flex;
           justify-content: space-between;
           cursor: pointer;
-          font-weight: 500;
-          padding: 5px 0;
+          font-weight: 600;
+          padding: 6px 0;
+          color: #334155;
         }
         .cat-details-summary summary:hover {
-          color: #2980b9;
+          color: #3b82f6;
         }
 
-        /* All Months Summary Table Styles */
+        /* --- All Months Summary Table Styles --- */
+        .all-months-container {
+          overflow-x: auto;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+        }
         .all-months-table {
           width: 100%;
           border-collapse: collapse;
-          margin-top: 10px;
           font-size: 0.95rem;
+          white-space: nowrap;
         }
         .all-months-table th,
         .all-months-table td {
-          border-bottom: 1px solid #eee;
-          padding: 10px;
+          padding: 14px 16px;
           text-align: right;
+          border-bottom: 1px solid #e2e8f0;
         }
         .all-months-table th:first-child,
         .all-months-table td:first-child {
           text-align: left;
         }
         .all-months-table th {
-          background-color: #f9f9f9;
-          font-weight: bold;
-          color: #555;
+          background-color: #f8fafc;
+          font-weight: 600;
+          color: #475569;
+          text-transform: uppercase;
+          font-size: 0.85rem;
+          letter-spacing: 0.05em;
         }
-        .all-months-table tr:hover {
-          background-color: #f5f5f5;
-        }
-        .grand-total-row {
-          background-color: #eaf2f8 !important;
-          font-weight: bold;
-          font-size: 1.05rem;
+        .all-months-table tr:hover:not(.grand-total-row) {
+          background-color: #f1f5f9;
         }
         .grand-total-row td {
-          border-top: 2px solid #ccc;
+          border-top: 2px solid #cbd5e1;
+          color: #1e293b;
+          font-weight: 700;
+          font-size: 1.05rem;
+          background-color: #f8fafc;
         }
+
+        /* --- Responsive Adjustments --- */
         @media (max-width: 768px) {
+          .daily-container {
+            padding: 10px 5px;
+          }
+          .header-section {
+            padding: 15px;
+            border-radius: 16px;
+          }
+          .month-nav {
+            padding: 8px 16px;
+            gap: 10px;
+          }
+          .month-nav h2 {
+            font-size: 1.15rem;
+            min-width: 130px;
+          }
+          .month-nav button {
+            width: 32px;
+            height: 32px;
+          }
+          .month-summary {
+            gap: 10px;
+          }
+          .summary-card-item {
+            min-width: 110px;
+            padding: 12px 10px;
+            border-radius: 12px;
+          }
+          .summary-card-item .val {
+            font-size: 1.15rem;
+          }
+          .search-bar input {
+            width: 95%;
+            padding: 10px 16px;
+          }
+          
+          /* Calendar Mobile */
+          .calendar-card {
+            padding: 12px 8px;
+            border-radius: 16px;
+          }
+          .calendar-header-grid {
+            font-size: 0.85rem;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+          }
+          .calendar-grid {
+            gap: 4px;
+          }
+          .day-cell {
+            min-height: 60px;
+            padding: 4px 2px;
+            border-radius: 8px;
+          }
+          .day-cell:hover:not(.empty) {
+            transform: none;
+            box-shadow: none;
+          }
+          .day-num {
+            font-size: 0.85rem;
+            margin-bottom: 2px;
+          }
+          .day-amounts {
+            font-size: 0.6rem;
+            gap: 2px;
+          }
+          .inc-tiny, .exp-tiny {
+            padding: 1px 0;
+            border-radius: 4px;
+            width: 90%;
+            margin: 0 auto;
+          }
+          .star-indicator {
+            font-size: 0.6rem;
+            top: 2px;
+            right: 2px;
+          }
+          .car-indicator {
+            font-size: 0.6rem;
+            top: 2px;
+            left: 2px;
+          }
+
+          .card {
+            padding: 15px;
+            border-radius: 16px;
+            margin-bottom: 15px;
+          }
+          
+          /* Modals Mobile */
+          .modal-overlay {
+            padding: 0;
+            align-items: flex-end; /* Bottom sheet style on mobile */
+          }
+          .modal-content {
+            max-height: 85vh;
+            border-radius: 24px 24px 0 0;
+            margin-bottom: 0;
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+            animation: slideUpMobile 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          }
+          @keyframes slideUpMobile {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+          }
+          .modal-header {
+            border-radius: 24px 24px 0 0;
+          }
+          
+          /* Tables Mobile */
           .all-months-table {
             font-size: 0.85rem;
           }
           .all-months-table th,
           .all-months-table td {
-            padding: 8px 5px;
+            padding: 10px 8px;
           }
         }
       `}</style>
