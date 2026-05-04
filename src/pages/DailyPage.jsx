@@ -1093,7 +1093,7 @@ function DailyPage({ theme }) {
           width: 100%;
           max-width: 450px;
           max-height: 85vh;
-          overflow-y: auto;
+          overflow: hidden;
           box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
           animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
@@ -1139,6 +1139,9 @@ function DailyPage({ theme }) {
         }
         .modal-body {
           padding: 16px 24px;
+          border-radius: inherit;
+          overflow: auto;
+          max-height: calc(85vh - 56px);
         }
         .modal-item {
           display: flex;
@@ -1334,10 +1337,8 @@ function DailyPage({ theme }) {
           }
           .modal-content {
             max-height: 85vh;
-            border-radius: 24px 24px 0 0;
+            border-radius: 24px;
             margin-bottom: 0;
-            border-bottom-left-radius: 0;
-            border-bottom-right-radius: 0;
             animation: slideUpMobile 0.3s cubic-bezier(0.16, 1, 0.3, 1);
           }
           @keyframes slideUpMobile {
