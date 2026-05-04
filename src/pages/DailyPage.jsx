@@ -1331,7 +1331,6 @@ function DailyPage({ theme }) {
           /* Modals Mobile */
           .modal-overlay {
             padding: 0;
-            align-items: flex-end; /* Bottom sheet style on mobile */
           }
           .modal-content {
             max-height: 85vh;
