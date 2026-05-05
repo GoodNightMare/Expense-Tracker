@@ -29,6 +29,7 @@ function DailyPage({ theme }) {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [selectedDateData, setSelectedDateData] = useState(null); // เก็บข้อมูลวันที่ถูกคลิก
   const [summaryModal, setSummaryModal] = useState(null); // State สำหรับ Summary Modal
+  const [helpModalOpen, setHelpModalOpen] = useState(false); // State สำหรับ Help Modal
   const [searchTerm, setSearchTerm] = useState(""); // State สำหรับการค้นหา
 
   const today = new Date().toISOString().split("T")[0];
@@ -319,6 +320,44 @@ function DailyPage({ theme }) {
 
   return (
     <div className="daily-container">
+      {/* --- Help Modal --- */}
+      {helpModalOpen && (
+        <div className="modal-overlay" onClick={() => setHelpModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>❔ คำอธิบายการใช้งาน (แท็กพิเศษ)</h3>
+              <button
+                className="close-btn"
+                onClick={() => setHelpModalOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body" style={{ lineHeight: "1.6" }}>
+              <p style={{ marginBottom: "15px", color: "var(--muted)" }}>
+                คุณสามารถพิมพ์ข้อความเหล่านี้ลงในช่อง <b>"คำอธิบาย" (Note)</b> เพื่อใช้เงื่อนไขพิเศษในการคำนวณ:
+              </p>
+              <ul style={{ listStyleType: "none", padding: 0 }}>
+                <li style={{ marginBottom: "12px", borderBottom: "1px dashed var(--soft)", paddingBottom: "8px" }}>
+                  <b style={{ color: "#ef4444" }}>(เงินสด)</b> : ใช้สำหรับรายการที่จ่ายด้วยเงินสดนอกกระเป๋าหลัก ระบบจะไม่นำไปคำนวณในยอดคงเหลือ
+                </li>
+                <li style={{ marginBottom: "12px", borderBottom: "1px dashed var(--soft)", paddingBottom: "8px" }}>
+                  <b style={{ color: "#ef4444" }}>(ไม่ต้องคิด)</b> : ระบบจะไม่นำยอดเงินนี้ไปคำนวณรวมในสรุปรายเดือน แต่ยังคงแสดงในประวัติ
+                </li>
+                <li style={{ marginBottom: "12px", borderBottom: "1px dashed var(--soft)", paddingBottom: "8px" }}>
+                  <b style={{ color: "#ef4444" }}>(~)</b> : ทำหน้าที่เหมือนกับ (ไม่ต้องคิด)
+                </li>
+              </ul>
+              <div style={{ marginTop: "20px", padding: "10px", background: "var(--soft)", borderRadius: "8px", fontSize: "0.9rem" }}>
+                <b>💡 หมวดหมู่พิเศษ:</b><br />
+                - หากหมวดหมู่คือ <b>"ชาร์จรถ"</b> ระบบจะข้ามการคำนวณอัตโนมัติและแสดงไอคอน 🚗 ในปฏิทิน<br />
+                - หมวดหมู่ <b>"ของกิน", "ของใช้ประจำวัน", "บันเทิง"</b> หากใช้จ่ายเกิน 100 บาท จะมี 🌟 สีส้ม, หากเกิน 200 บาท จะมี 🌟 สีแดง แจ้งเตือนในปฏิทิน
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* --- Summary Detail Modal --- */}
       {summaryModal && (
         <div className="modal-overlay" onClick={() => setSummaryModal(null)}>
@@ -469,14 +508,34 @@ function DailyPage({ theme }) {
           </button>
         </div>
 
-        {/* --- Search Bar --- */}
-        <div className="search-bar">
+        {/* --- Search Bar & Help Button --- */}
+        <div className="search-bar" style={{ display: "flex", gap: "10px", justifyContent: "center", alignItems: "center" }}>
           <input
             type="text"
             placeholder="ค้นหา (หัวข้อ, คำอธิบาย)..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ margin: 0 }}
           />
+          <button
+            onClick={() => setHelpModalOpen(true)}
+            style={{
+              background: "var(--soft)",
+              border: "none",
+              borderRadius: "50%",
+              width: "40px",
+              height: "40px",
+              fontSize: "1.2rem",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0
+            }}
+            title="คำอธิบายการใช้งาน"
+          >
+            ❔
+          </button>
         </div>
 
         <div className="month-summary">
@@ -755,7 +814,8 @@ function DailyPage({ theme }) {
             e.type === "expense" &&
             !exclusionList.includes(e.category) &&
             !(e.note && e.note.includes("(ไม่ต้องคิด)")) &&
-            !(e.note && e.note.includes("(~)")), // เพิ่มบรรทัดนี้
+            !(e.note && e.note.includes("(เงินสด)")) &&
+            !(e.note && e.note.includes("(~)")),
         ).length > 0 ? (
           <ExpenseChart
             expenses={filteredExpenses.filter(
@@ -763,7 +823,8 @@ function DailyPage({ theme }) {
                 e.type === "expense" &&
                 !exclusionList.includes(e.category) &&
                 !(e.note && e.note.includes("(ไม่ต้องคิด)")) &&
-                !(e.note && e.note.includes("(~)")), // และบรรทัดนี้
+                !(e.note && e.note.includes("(เงินสด)")) &&
+                !(e.note && e.note.includes("(~)")),
             )}
           />
         ) : (
