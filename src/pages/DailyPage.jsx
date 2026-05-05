@@ -520,8 +520,6 @@ function DailyPage({ theme }) {
           <button
             onClick={() => setHelpModalOpen(true)}
             style={{
-              // background: "var(--soft)",
-              // color: "var(--muted)",
               border: "none",
               borderRadius: "50%",
               width: "40px",
