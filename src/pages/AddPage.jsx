@@ -166,12 +166,12 @@ function AddPage() {
         <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h3 className="modal-title">⚠️ ยืนยันการลบ</h3>
-            <p className="modal-desc">พิมพ์ “ยืนยัน” เพื่อทำรายการลบ</p>
+            <p className="modal-desc">พิมพ์ "รหัส" เพื่อทำรายการลบ</p>
 
             <input
               type="text"
               className="modal-input"
-              placeholder="พิมพ์ 'ยืนยัน' เพื่อลบ..."
+              placeholder="พิมพ์ 'รหัส' เพื่อลบ..."
               onChange={(e) => setDeleteConfirmation(e.target.value)}
             />
 
@@ -187,7 +187,6 @@ function AddPage() {
                 type="button"
                 onClick={handleConfirmDelete}
                 className="modal-btn confirm-btn"
-                disabled={deleteConfirmation.trim() !== "ยืนยัน"}
               >
                 ยืนยันการลบ
               </button>
