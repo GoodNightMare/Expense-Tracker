@@ -81,7 +81,10 @@ function DailyPage({ theme }) {
     (e) =>
       !exclusionList.includes(e.category) &&
       (!e.note ||
-        (!e.note.includes("(เงินสด)") && !e.note.includes("(ไม่ต้องคิด)"))),
+        (!e.note.includes("(เงินสด)") && 
+          !e.note.includes("(ไม่ต้องคิด)") &&
+          !e.note.includes("(~)")
+        )),
   );
 
   // --- สรุปทุกเดือน ---
@@ -89,7 +92,8 @@ function DailyPage({ theme }) {
     if (
       exclusionList.includes(exp.category) ||
       (exp.note && exp.note.includes("(เงินสด)")) ||
-      exp.note.includes("(ไม่ต้องคิด)")
+      exp.note.includes("(ไม่ต้องคิด)") ||
+      exp.note.includes("(~)")
     ) {
       return acc;
     }
@@ -729,14 +733,16 @@ function DailyPage({ theme }) {
           (e) =>
             e.type === "expense" &&
             !exclusionList.includes(e.category) &&
-            !(e.note && e.note.includes("(ไม่ต้องคิด)")), // เพิ่มบรรทัดนี้
+            !(e.note && e.note.includes("(ไม่ต้องคิด)")) &&
+            !(e.note && e.note.includes("(~)")), // เพิ่มบรรทัดนี้
         ).length > 0 ? (
           <ExpenseChart
             expenses={filteredExpenses.filter(
               (e) =>
                 e.type === "expense" &&
                 !exclusionList.includes(e.category) &&
-                !(e.note && e.note.includes("(ไม่ต้องคิด)")), // และบรรทัดนี้
+                !(e.note && e.note.includes("(ไม่ต้องคิด)")) &&
+                !(e.note && e.note.includes("(~)")), // และบรรทัดนี้
             )}
           />
         ) : (
