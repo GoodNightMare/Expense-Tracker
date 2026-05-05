@@ -337,9 +337,12 @@ function DailyPage({ theme }) {
             </div>
             <div className="modal-body" style={{ lineHeight: "1.6" }}>
               <p style={{ marginBottom: "15px", color: "var(--muted)" }}>
-                คุณสามารถพิมพ์ข้อความเหล่านี้ลงในช่อง <b>"คำอธิบาย" (Note)</b> เพื่อใช้เงื่อนไขพิเศษในการคำนวณ:
+                คุณสามารถพิมพ์ข้อความเหล่านี้ลงในช่อง <b>"คำอธิบาย" (Note)</b> เพื่อใช้เงื่อนไขพิเศษหรือระบุหมายเลขบิล:
               </p>
               <ul style={{ listStyleType: "none", padding: 0 }}>
+                <li style={{ marginBottom: "12px", borderBottom: "1px dashed var(--soft)", paddingBottom: "8px" }}>
+                  <b style={{ color: "#ef4444" }}>B010269#1</b> : <b>รูปแบบแท็กบิล</b> (B = บิลไว้สำหรับแยกไว้, 01 = วันที่, 02 = เดือน, 69 = ปี, #1 = หมายเลขบิล)
+                </li>
                 <li style={{ marginBottom: "12px", borderBottom: "1px dashed var(--soft)", paddingBottom: "8px" }}>
                   <b style={{ color: "#ef4444" }}>(เงินสด)</b> : ใช้สำหรับรายการที่จ่ายด้วยเงินสดนอกกระเป๋าหลัก ระบบจะไม่นำไปคำนวณในยอดคงเหลือ
                 </li>
