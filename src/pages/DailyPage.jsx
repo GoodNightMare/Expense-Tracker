@@ -169,8 +169,24 @@ function DailyPage({ theme }) {
   // ใช้ข้อมูลของทั้งเดือน (filteredExpenses) เพื่อให้กราฟและ breakdown แสดงผลทุกรายการ
   const categorySummary = filteredExpenses.reduce((acc, exp) => {
     const key = `${exp.type}-${exp.category}`;
-    if (!acc[key]) acc[key] = { ...exp, total: 0, details: [] };
-    acc[key].total += parseFloat(exp.amount);
+    if (!acc[key]) acc[key] = { ...exp, total: 0, excludedTotal: 0, details: [] };
+
+    const isExcluded = 
+      exclusionList.includes(exp.category) ||
+      (exp.note && (
+        exp.note.includes("(เงินสด)") ||
+        exp.note.includes("(ไม่ต้องคิด)") ||
+        exp.note.includes("(~)")
+      ));
+
+    const amount = parseFloat(exp.amount) || 0;
+    
+    if (isExcluded) {
+      acc[key].excludedTotal += amount;
+    } else {
+      acc[key].total += amount;
+    }
+
     acc[key].details.push(exp);
     return acc;
   }, {});
@@ -697,6 +713,11 @@ function DailyPage({ theme }) {
                   className={`cat-total ${cat.type === "income" ? "inc" : "exp"}`}
                 >
                   {formatNumber(cat.total)} ฿
+                  {cat.excludedTotal > 0 && (
+                    <span style={{ fontSize: "0.8em", color: "gray", marginLeft: "5px" }}>
+                      (ไม่รวม: {formatNumber(cat.excludedTotal)} ฿)
+                    </span>
+                  )}
                 </span>
               </summary>
               <div className="details-content">
