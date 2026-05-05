@@ -84,9 +84,14 @@ body {
   transition: all 0.3s;
 }
 
-.navbar a:hover,
+.navbar a:hover {
+  background: var(--soft);
+}
+
 .navbar a.active {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--text);
+  color: var(--card);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* Card */

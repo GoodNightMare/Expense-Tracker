@@ -28,6 +28,7 @@ function DailyPage({ theme }) {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [selectedDateData, setSelectedDateData] = useState(null); // เก็บข้อมูลวันที่ถูกคลิก
+  const [dateViewMode, setDateViewMode] = useState("bill"); // State สำหรับรูปแบบการแสดงผลวันที่ (normal, bill)
   const [summaryModal, setSummaryModal] = useState(null); // State สำหรับ Summary Modal
   const [helpModalOpen, setHelpModalOpen] = useState(false); // State สำหรับ Help Modal
   const [searchTerm, setSearchTerm] = useState(""); // State สำหรับการค้นหา
@@ -287,6 +288,7 @@ function DailyPage({ theme }) {
         day: day,
         items: dayItems,
       });
+      setDateViewMode("bill");
     }
   };
 
@@ -460,27 +462,86 @@ function DailyPage({ theme }) {
               </button>
             </div>
             <div className="modal-body">
-              {selectedDateData.items.map((item) => (
-                <div key={item.id} className="modal-item">
-                  <div className="item-main">
-                    <span
-                      className={item.type === "income" ? "dot-inc" : "dot-exp"}
-                    >
-                      ●
-                    </span>
-                    <div className="item-details">
-                      <span className="item-note">{item.note || "-"}</span>
-                      <span className="item-cat">{item.category}</span>
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                <button
+                  onClick={() => setDateViewMode('bill')}
+                  style={{ flex: 1, padding: '8px', borderRadius: '8px', border: '1px solid var(--border)', background: dateViewMode === 'bill' ? 'var(--text)' : 'var(--card)', color: dateViewMode === 'bill' ? 'var(--card)' : 'var(--text)', cursor: 'pointer', fontWeight: dateViewMode === 'bill' ? 'bold' : 'normal', transition: 'all 0.2s' }}
+                >
+                  แบบแยกบิล
+                </button>
+                <button
+                  onClick={() => setDateViewMode('normal')}
+                  style={{ flex: 1, padding: '8px', borderRadius: '8px', border: '1px solid var(--border)', background: dateViewMode === 'normal' ? 'var(--text)' : 'var(--card)', color: dateViewMode === 'normal' ? 'var(--card)' : 'var(--text)', cursor: 'pointer', fontWeight: dateViewMode === 'normal' ? 'bold' : 'normal', transition: 'all 0.2s' }}
+                >
+                  แบบปกติ
+                </button>
+              </div>
+              {dateViewMode === 'normal' ? (
+                selectedDateData.items.map((item) => (
+                  <div key={item.id} className="modal-item">
+                    <div className="item-main">
+                      <span
+                        className={item.type === "income" ? "dot-inc" : "dot-exp"}
+                      >
+                        ●
+                      </span>
+                      <div className="item-details">
+                        <span className="item-note">{item.note || "-"}</span>
+                        <span className="item-cat">{item.category}</span>
+                      </div>
                     </div>
+                    <span
+                      className={item.type === "income" ? "inc-text" : "exp-text"}
+                    >
+                      {item.type === "income" ? "+" : "-"}
+                      {item.amount.toLocaleString()} ฿
+                    </span>
                   </div>
-                  <span
-                    className={item.type === "income" ? "inc-text" : "exp-text"}
-                  >
-                    {item.type === "income" ? "+" : "-"}
-                    {item.amount.toLocaleString()} ฿
-                  </span>
-                </div>
-              ))}
+                ))
+              ) : (
+                Object.entries(
+                  selectedDateData.items.reduce((acc, item) => {
+                    const match = item.note?.match(/B\d{6}#\d+/i);
+                    const billId = match ? match[0].toUpperCase() : "อื่นๆ";
+                    if (!acc[billId]) acc[billId] = [];
+                    acc[billId].push(item);
+                    return acc;
+                  }, {})
+                ).map(([billId, items]) => {
+                  const billTotal = items.reduce((sum, item) => sum + (item.type === "income" ? parseFloat(item.amount) : -parseFloat(item.amount)), 0);
+                  return (
+                    <div key={billId} style={{ marginBottom: '20px' , background: 'var(--soft)', padding: '10px', borderRadius: '8px'}}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid var(--soft)', paddingBottom: '5px', marginBottom: '10px' }}>
+                        <h4 style={{ margin: 0, color: 'var(--text)' }}>{billId}</h4>
+                        <span style={{ fontWeight: 'bold', color: billTotal >= 0 ? '#10b981' : '#ef4444' }}>
+                          {billTotal >= 0 ? "+" : "-"}{Math.abs(billTotal).toLocaleString()} ฿
+                        </span>
+                      </div>
+                      {items.map((item) => (
+                        <div key={item.id} className="modal-item" style={{ padding: '8px 0' }}>
+                          <div className="item-main">
+                            <span
+                              className={item.type === "income" ? "dot-inc" : "dot-exp"}
+                            >
+                              ●
+                            </span>
+                            <div className="item-details">
+                              <span className="item-note">{item.note || "-"}</span>
+                              <span className="item-cat">{item.category}</span>
+                            </div>
+                          </div>
+                          <span
+                            className={item.type === "income" ? "inc-text" : "exp-text"}
+                          >
+                            {item.type === "income" ? "+" : "-"}
+                            {item.amount.toLocaleString()} ฿
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
