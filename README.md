@@ -1,16 +1,40 @@
-# React + Vite
+# 📊 Expense Tracker (ระบบบันทึกและติดตามรายรับ-รายจ่าย)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+เว็บแอปพลิเคชันสำหรับบันทึก ติดตาม และวิเคราะห์รายรับ-รายจ่ายส่วนบุคคล ช่วยให้ผู้ใช้งานสามารถบริหารจัดการการเงินได้อย่างมีประสิทธิภาพผ่านแดชบอร์ดที่เข้าใจง่าย พร้อมระบบสรุปข้อมูลและการกรองหมวดหมู่อัจฉริยะ
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## ✨ Features (ฟีเจอร์หลักของระบบ)
 
-## React Compiler
+- 💰 **Income & Expense Logging:** บันทึกรายรับและรายจ่าย พร้อมระบุจำนวนเงิน วันที่ และคำอธิบาย
+- 📂 **Category Filtering:** ระบบแยกแยะและกรองข้อมูลตามหมวดหมู่ (เช่น อาหาร, เดินทาง, ช้อปปิ้ง, บันเทิง) เพื่อการวิเคราะห์ที่แม่นยำ
+- 📅 **Daily Summaries:** ระบบสรุปยอดรวมรายรับ-รายจ่ายประจำวัน ช่วยให้เห็นภาพรวมพฤติกรรมการใช้เงินในแต่ละวัน
+- ☁️ **Dual-Database Integration:** ระบบจัดเก็บข้อมูลที่มีความยืดหยุ่นสูง รองรับทั้งการบันทึกผ่านฐานข้อมูลหลักและการซิงค์ข้อมูลภายนอก
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+---
 
-## Expanding the ESLint configuration
+## 🛠️ Tech Stack & Architecture (เทคโนโลยีที่ใช้)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+โปรเจกต์นี้พัฒนาขึ้นด้วยสถาปัตยกรรมแบบ **Decoupled Architecture** (แยกส่วนหน้าบ้านและหลังบ้าน) เพื่อความยืดหยุ่นและรองรับการขยายระบบในอนาคต
+
+- **Frontend:** React.js, HTML5, CSS3 / Tailwind CSS (จัดการ Component และ State ของหน้าเว็บให้ลื่นไหล)
+- **Backend:** Node.js, Express (สร้าง RESTful API สำหรับจัดการ Logic หลังบ้าน)
+- **Databases & Integration:**
+  - **MongoDB:** สำหรับเป็นฐานข้อมูลหลักในการจัดเก็บข้อมูลธุรกรรมอย่างมีระบบ
+  - **Google Sheets API:** สำหรับซิงค์ข้อมูลและดึงข้อมูลสรุปสถิติภายนอกได้อย่างสะดวก
+
+---
+
+## 🚀 Getting Started (วิธีการติดตั้งและรันโปรเจกต์)
+
+### Prerequisite (สิ่งที่ต้องมีก่อนติดตั้ง)
+- Node.js (เวอร์ชัน 16 ขึ้นไป)
+- บัญชี MongoDB (หรือ Local MongoDB Instance)
+- Google Cloud Service Account Credentials (สำหรับเชื่อมต่อ Google Sheets API)
+
+### การติดตั้ง
+
+1. **Clone Repository นี้ลงเครื่อง:**
+   ```bash
+   git clone [https://github.com/YOUR_USERNAME/Expense-Tracker.git](https://github.com/YOUR_USERNAME/Expense-Tracker.git)
+   cd Expense-Tracker
