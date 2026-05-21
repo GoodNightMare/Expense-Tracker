@@ -4,9 +4,12 @@ import axios from 'axios'
 import DailyPage from './pages/DailyPage.jsx'
 import AddPage from './pages/AddPage.jsx'
 import API_URL from './api/index.js'
+import { initialDemoData } from './api/mockData.js'
 
 const TOKEN_STORAGE_KEY = 'app_token'
 const THEME_STORAGE_KEY = 'theme'
+const DEMO_STORAGE_KEY = 'is_demo'
+const DEMO_DATA_KEY = 'demo_expenses'
 
 function getInitialTheme() {
   const saved = localStorage.getItem(THEME_STORAGE_KEY)
@@ -24,9 +27,18 @@ function setAxiosAuthToken(token) {
 
 function useAuthFromLocalStorage() {
   const [isAuth, setIsAuth] = useState(false)
+  const [isDemo, setIsDemo] = useState(false)
 
   useEffect(() => {
     const savedToken = localStorage.getItem(TOKEN_STORAGE_KEY)
+    const savedIsDemo = localStorage.getItem(DEMO_STORAGE_KEY) === 'true'
+    
+    if (savedIsDemo) {
+      setIsDemo(true)
+      setIsAuth(true)
+      return
+    }
+
     if (!savedToken) return
     setAxiosAuthToken(savedToken)
     setIsAuth(true)
@@ -38,21 +50,35 @@ function useAuthFromLocalStorage() {
 
     const token = response.data.token
     localStorage.setItem(TOKEN_STORAGE_KEY, token)
+    localStorage.setItem(DEMO_STORAGE_KEY, 'false')
     setAxiosAuthToken(token)
+    setIsDemo(false)
     setIsAuth(true)
     return true
   }
 
+  const demoLogin = () => {
+    localStorage.setItem(DEMO_STORAGE_KEY, 'true')
+    localStorage.removeItem(TOKEN_STORAGE_KEY)
+    if (!localStorage.getItem(DEMO_DATA_KEY)) {
+      localStorage.setItem(DEMO_DATA_KEY, JSON.stringify(initialDemoData))
+    }
+    setIsDemo(true)
+    setIsAuth(true)
+  }
+
   const logout = () => {
     localStorage.removeItem(TOKEN_STORAGE_KEY)
+    localStorage.removeItem(DEMO_STORAGE_KEY)
     setAxiosAuthToken(null)
+    setIsDemo(false)
     setIsAuth(false)
   }
 
-  return { isAuth, login, logout }
+  return { isAuth, isDemo, login, demoLogin, logout }
 }
 
-function LoginScreen({ onLogin }) {
+function LoginScreen({ onLogin, onDemo }) {
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -87,6 +113,10 @@ function LoginScreen({ onLogin }) {
             {isSubmitting ? 'กำลังตรวจสอบ...' : 'ยืนยัน'}
           </button>
         </form>
+        <div className="demo-divider">หรือ</div>
+        <button onClick={onDemo} className="demo-btn">
+          ✨ (Demo)
+        </button>
       </div>
       <style jsx>{`
         .login-screen {
@@ -160,19 +190,105 @@ function LoginScreen({ onLogin }) {
           box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
           filter: brightness(1.1);
         }
+
+        .demo-divider {
+          margin: 20px 0;
+          color: #666;
+          font-size: 14px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .demo-divider::before, .demo-divider::after {
+          content: "";
+          flex: 1;
+          height: 1px;
+          background: #eee;
+        }
+
+        .demo-btn {
+          width: 100%;
+          padding: 12px;
+          background: white;
+          color: #2c5364;
+          border: 2px solid #2c5364;
+          border-radius: 12px;
+          font-size: 16px;
+          font-weight: bold;
+          cursor: pointer;
+          transition: 0.3s;
+        }
+        .demo-btn:hover {
+          background: #f0f7f9;
+        }
       `}</style>
     </div>
   )
 }
 
 function App() {
-  const { isAuth, login, logout } = useAuthFromLocalStorage()
+  const { isAuth, isDemo, login, demoLogin, logout } = useAuthFromLocalStorage()
   const [theme, setTheme] = useState(getInitialTheme)
 
   useEffect(() => {
     localStorage.setItem(THEME_STORAGE_KEY, theme)
     document.documentElement.dataset.theme = theme
   }, [theme])
+
+  // Axios interceptor for demo mode
+  useEffect(() => {
+    if (!isDemo) return
+
+    const interceptor = axios.interceptors.request.use(async (config) => {
+      if (config.url.includes(`${API_URL}/expenses`)) {
+        const method = config.method.toLowerCase()
+        const data = JSON.parse(localStorage.getItem(DEMO_DATA_KEY) || '[]')
+
+        let response = { data: null, status: 200, statusText: 'OK', headers: {}, config }
+
+        if (method === 'get') {
+          response.data = data
+        } else if (method === 'post') {
+          const newItem = { ...config.data, id: Date.now() }
+          const updatedData = [...data, newItem]
+          localStorage.setItem(DEMO_DATA_KEY, JSON.stringify(updatedData))
+          response.data = newItem
+        } else if (method === 'put') {
+          const id = parseInt(config.url.split('/').pop())
+          const updatedData = data.map(item => item.id === id ? { ...item, ...config.data } : item)
+          localStorage.setItem(DEMO_DATA_KEY, JSON.stringify(updatedData))
+          response.data = config.data
+        } else if (method === 'delete') {
+          const id = parseInt(config.url.split('/').pop())
+          const updatedData = data.filter(item => item.id !== id)
+          localStorage.setItem(DEMO_DATA_KEY, JSON.stringify(updatedData))
+          response.data = { success: true }
+        }
+
+        // Return a mock response by throwing an object that we'll catch in the response interceptor
+        // Actually, axios doesn't easily allow returning a response from a request interceptor without sending the request.
+        // A better way is to use a custom adapter or just handle it in the response interceptor by checking for a flag.
+        // But for simplicity, we can just throw the response and catch it.
+        return Promise.reject({ mockResponse: response })
+      }
+      return config
+    })
+
+    const responseInterceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.mockResponse) {
+          return Promise.resolve(error.mockResponse)
+        }
+        return Promise.reject(error)
+      }
+    )
+
+    return () => {
+      axios.interceptors.request.eject(interceptor)
+      axios.interceptors.response.eject(responseInterceptor)
+    }
+  }, [isDemo])
 
   // ถ้ายังไม่ได้ยืนยันตัวตน ให้แสดงหน้าใส่รหัส
   if (!isAuth) {
@@ -189,12 +305,17 @@ function App() {
       }
     }
 
-    return <LoginScreen onLogin={onLogin} />
+    return <LoginScreen onLogin={onLogin} onDemo={demoLogin} />
   }
 
   // ถ้าผ่านแล้ว ให้แสดงหน้าแอปปกติ
   return (
     <div className="app-container">
+      {isDemo && (
+        <div className="demo-badge">
+          ✨ โหมดทดสอบ (Demo) - ข้อมูลจะถูกบันทึกไว้ในเครื่องของคุณเท่านั้น
+        </div>
+      )}
       <nav className="navbar">
         <NavLink to="/" className={({ isActive }) => isActive ? 'active' : ''}>📊 สรุปรายวัน</NavLink>
         <NavLink to="/add" className={({ isActive }) => isActive ? 'active' : ''}>✏️ บันทึก</NavLink>
@@ -220,6 +341,15 @@ function App() {
         .logout-nav-btn:hover { opacity: 1; }
         .theme-nav-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 0 10px; opacity: 0.85; }
         .theme-nav-btn:hover { opacity: 1; }
+        .demo-badge {
+          background: #fef3c7;
+          color: #92400e;
+          text-align: center;
+          padding: 8px;
+          font-size: 14px;
+          font-weight: bold;
+          border-bottom: 1px solid #fde68a;
+        }
       `}</style>
     </div>
   )
