@@ -20,7 +20,6 @@
 - **Frontend:** React.js, HTML5, CSS3 / Tailwind CSS (จัดการ Component และ State ของหน้าเว็บให้ลื่นไหล)
 - **Backend:** Node.js, Express (สร้าง RESTful API สำหรับจัดการ Logic หลังบ้าน)
 - **Databases & Integration:**
-  - **MongoDB:** สำหรับเป็นฐานข้อมูลหลักในการจัดเก็บข้อมูลธุรกรรมอย่างมีระบบ
   - **Google Sheets API:** สำหรับซิงค์ข้อมูลและดึงข้อมูลสรุปสถิติภายนอกได้อย่างสะดวก
 
 ---
@@ -29,12 +28,13 @@
 
 ### Prerequisite (สิ่งที่ต้องมีก่อนติดตั้ง)
 - Node.js (เวอร์ชัน 16 ขึ้นไป)
-- บัญชี MongoDB (หรือ Local MongoDB Instance)
 - Google Cloud Service Account Credentials (สำหรับเชื่อมต่อ Google Sheets API)
 
 ### การติดตั้ง
 
 1. **Clone Repository นี้ลงเครื่อง:**
    ```bash
-   git clone [https://github.com/YOUR_USERNAME/Expense-Tracker.git](https://github.com/YOUR_USERNAME/Expense-Tracker.git)
+   git clone this repository.
    cd Expense-Tracker
+   npm install
+   npm run dev
