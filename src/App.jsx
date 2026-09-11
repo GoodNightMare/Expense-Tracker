@@ -61,6 +61,7 @@ function useAuthFromLocalStorage() {
     localStorage.setItem(DEMO_STORAGE_KEY, 'true')
     localStorage.removeItem(TOKEN_STORAGE_KEY)
     if (!localStorage.getItem(DEMO_DATA_KEY)) {
+      console.log(initialDemoData)
       localStorage.setItem(DEMO_DATA_KEY, JSON.stringify(initialDemoData))
     }
     setIsDemo(true)

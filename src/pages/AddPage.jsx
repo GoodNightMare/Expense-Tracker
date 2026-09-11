@@ -25,6 +25,7 @@ function AddPage() {
   const [category, setCategory] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [note, setNote] = useState("");
+  const [fundingSource, setFundingSource] = useState("salary");
   const [alert, setAlert] = useState(null);
   const [allExpenses, setAllExpenses] = useState([]);
   const [editId, setEditId] = useState(null); // State สำหรับเก็บ ID ที่กำลังแก้ไข
@@ -70,6 +71,7 @@ function AddPage() {
       category,
       date,
       note,
+      fundingSource: type === "expense" ? fundingSource : "salary",
     };
 
     try {
@@ -86,6 +88,7 @@ function AddPage() {
       setAmount("");
       setCategory("");
       setNote("");
+      setFundingSource("salary");
       setEditId(null); // รีเซ็ตสถานะแก้ไข
       fetchAllExpenses();
 
@@ -125,6 +128,7 @@ function AddPage() {
     setCategory(item.category);
     setDate(item.date);
     setNote(item.note || "");
+    setFundingSource(item.fundingSource || "salary");
     setEditId(item.id);
     window.scrollTo({ top: 0, behavior: "smooth" }); // เลื่อนขึ้นไปหาฟอร์ม
   };
@@ -133,6 +137,7 @@ function AddPage() {
     setAmount("");
     setCategory("");
     setNote("");
+    setFundingSource("salary");
     setEditId(null);
   };
 
@@ -289,6 +294,33 @@ function AddPage() {
             />
           </div>
 
+          {type === "expense" && (
+            <div className="form-group">
+              <label>หักเงินจาก</label>
+              <div className="funding-toggle" role="group" aria-label="เลือกแหล่งเงิน">
+                <button
+                  type="button"
+                  className={fundingSource === "salary" ? "active salary" : ""}
+                  aria-pressed={fundingSource === "salary"}
+                  onClick={() => setFundingSource("salary")}
+                >
+                  💵 เงินเดือน
+                </button>
+                <button
+                  type="button"
+                  className={fundingSource === "savings" ? "active savings" : ""}
+                  aria-pressed={fundingSource === "savings"}
+                  onClick={() => setFundingSource("savings")}
+                >
+                  🏦 เงินเก็บ
+                </button>
+              </div>
+              <small className="field-hint">
+                เงินเก็บจะหักจากยอดสะสมทั้งหมด และไม่หักยอดคงเหลือของเดือนนี้
+              </small>
+            </div>
+          )}
+
           <div style={{ display: "flex", gap: "10px" }}>
             <button type="submit" className="submit-btn" style={{ flex: 1 }}>
               {editId ? "🔄 อัปเดต" : "💾 บันทึก"}
@@ -373,7 +405,14 @@ function AddPage() {
                   {exp.type === "income" ? "🟢" : "🔴"}{" "}
                   {exp.note || exp.category}
                 </span>
-                <span className="transaction-category">{exp.category}</span>
+                <div className="transaction-meta">
+                  <span className="transaction-category">{exp.category}</span>
+                  {exp.type === "expense" && (
+                    <span className={`funding-badge ${exp.fundingSource === "savings" ? "savings" : "salary"}`}>
+                      {exp.fundingSource === "savings" ? "เงินเก็บ" : "เงินเดือน"}
+                    </span>
+                  )}
+                </div>
                 <span className="transaction-date">{exp.date}</span>
               </div>
               <div
@@ -476,6 +515,62 @@ function AddPage() {
         }
 
         .form-group { margin-bottom: 12px; }
+        .funding-toggle {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 4px;
+          margin-top: 6px;
+          padding: 4px;
+          border: 1px solid var(--border);
+          border-radius: 14px;
+          background: color-mix(in oklab, var(--card) 80%, var(--bg));
+        }
+        .funding-toggle button {
+          padding: 10px 12px;
+          border: 1px solid transparent;
+          border-radius: 10px;
+          background: transparent;
+          color: var(--muted);
+          font: inherit;
+          font-weight: 700;
+          cursor: pointer;
+          transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .funding-toggle button.active.salary {
+          background: #dbeafe;
+          border-color: #93c5fd;
+          color: #1d4ed8;
+          box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+        }
+        .funding-toggle button.active.savings {
+          background: #fef3c7;
+          border-color: #fcd34d;
+          color: #92400e;
+          box-shadow: 0 2px 8px rgba(180, 83, 9, 0.12);
+        }
+        .field-hint {
+          display: block;
+          margin-top: 6px;
+          color: var(--muted);
+          font-size: 0.82rem;
+        }
+        .funding-badge {
+          width: fit-content;
+          padding: 2px 8px;
+          border-radius: 999px;
+          font-size: 0.75rem;
+          font-weight: 700;
+        }
+        .funding-badge.salary { background: #dbeafe; color: #2563eb; }
+        .funding-badge.savings { background: #fef3c7; color: #b45309; }
+        .transaction-meta {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 4px;
+        }
+        .transaction-meta .transaction-category { margin-top: 0; }
 
         .submit-btn {
           width: 100%;

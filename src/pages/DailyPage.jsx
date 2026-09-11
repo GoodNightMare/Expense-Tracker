@@ -32,6 +32,7 @@ function DailyPage({ theme }) {
   const [summaryModal, setSummaryModal] = useState(null); // State สำหรับ Summary Modal
   const [helpModalOpen, setHelpModalOpen] = useState(false); // State สำหรับ Help Modal
   const [searchTerm, setSearchTerm] = useState(""); // State สำหรับการค้นหา
+  const [showBalanceComparison, setShowBalanceComparison] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -61,7 +62,14 @@ function DailyPage({ theme }) {
     const term = searchTerm.toLowerCase();
     const note = (exp.note || "").toLowerCase();
     const category = (exp.category || "").toLowerCase();
-    return note.includes(term) || category.includes(term);
+    const fundingSource = exp.fundingSource === "savings"
+      ? "เงินเก็บ savings"
+      : "เงินเดือน salary";
+    return (
+      note.includes(term) ||
+      category.includes(term) ||
+      fundingSource.includes(term)
+    );
   });
 
   const highlightedDays = new Set(
@@ -72,6 +80,8 @@ function DailyPage({ theme }) {
 
   // รายการที่ต้องยกเว้นไม่ให้รวมในสรุป (เช่น ค่าชาร์จรถ)
   const exclusionList = ["ชาร์จรถ"];
+  const isSavingsExpense = (exp) =>
+    exp.type === "expense" && exp.fundingSource === "savings";
 
   // แยกข้อมูลที่ไม่เอามาคิดไว้ในอาร์เรย์เผื่อใช้งานภายหลัง
   const excludedItems = filteredExpenses.filter((e) =>
@@ -82,6 +92,7 @@ function DailyPage({ theme }) {
   const includedExpenses = filteredExpenses.filter(
     (e) =>
       !exclusionList.includes(e.category) &&
+      !isSavingsExpense(e) &&
       (!e.note ||
         (!e.note.includes("(เงินสด)") && 
           !e.note.includes("(ไม่ต้องคิด)") &&
@@ -94,8 +105,8 @@ function DailyPage({ theme }) {
     if (
       exclusionList.includes(exp.category) ||
       (exp.note && exp.note.includes("(เงินสด)")) ||
-      exp.note.includes("(ไม่ต้องคิด)") ||
-      exp.note.includes("(~)")
+      (exp.note && exp.note.includes("(ไม่ต้องคิด)")) ||
+      (exp.note && exp.note.includes("(~)"))
     ) {
       return acc;
     }
@@ -106,10 +117,14 @@ function DailyPage({ theme }) {
     const key = `${year}-${month}`;
 
     if (!acc[key]) {
-      acc[key] = { year, month, income: 0, expense: 0, balance: 0 };
+      acc[key] = { year, month, income: 0, expense: 0, savingsUsed: 0, balance: 0 };
     }
 
     const amount = parseFloat(exp.amount) || 0;
+    if (isSavingsExpense(exp)) {
+      acc[key].savingsUsed += amount;
+      return acc;
+    }
     if (exp.type === "income") {
       acc[key].income += amount;
       acc[key].balance += amount;
@@ -129,7 +144,9 @@ function DailyPage({ theme }) {
   let runningBalance = 0;
   allMonthsListAsc.forEach((m) => {
     m.prevCumulative = runningBalance;
-    runningBalance += m.balance;
+    m.savingsBalanceAfterUse = m.prevCumulative - m.savingsUsed;
+    runningBalance = m.savingsBalanceAfterUse + m.balance;
+    m.cumulativeAfter = runningBalance;
   });
 
   const allMonthsList = [...allMonthsListAsc].sort((a, b) => {
@@ -146,7 +163,7 @@ function DailyPage({ theme }) {
     0,
   );
   const totalAllMonthsBalance = allMonthsList.reduce(
-    (sum, m) => sum + m.balance,
+    (sum, m) => sum + m.balance - m.savingsUsed,
     0,
   );
 
@@ -158,6 +175,45 @@ function DailyPage({ theme }) {
     .filter((e) => e.type === "expense")
     .reduce((sum, e) => sum + parseFloat(e.amount), 0);
   const totalBalance = totalIncome - totalExpense;
+
+  // เปรียบเทียบยอดสะสมถึงวันเดียวกันของเดือนนี้และเดือนก่อนหน้า
+  const previousMonthDate = new Date(currentYear, currentMonth - 1, 1);
+  const previousMonth = previousMonthDate.getMonth();
+  const previousYear = previousMonthDate.getFullYear();
+  const comparisonDay = Math.min(
+    new Date().getDate(),
+    new Date(currentYear, currentMonth + 1, 0).getDate(),
+    new Date(previousYear, previousMonth + 1, 0).getDate(),
+  );
+  const isIncludedForComparison = (exp) => {
+    return !(
+      exclusionList.includes(exp.category) ||
+      isSavingsExpense(exp) ||
+      (exp.note &&
+        (exp.note.includes("(เงินสด)") ||
+          exp.note.includes("(ไม่ต้องคิด)") ||
+          exp.note.includes("(~)")))
+    );
+  };
+  const getBalanceThroughDay = (year, month) => expenses.reduce((sum, exp) => {
+    const d = new Date(exp.date);
+    if (
+      d.getMonth() !== month ||
+      d.getFullYear() !== year ||
+      d.getDate() > comparisonDay ||
+      !isIncludedForComparison(exp)
+    ) return sum;
+
+    const amount = parseFloat(exp.amount) || 0;
+    return sum + (exp.type === "income" ? amount : -amount);
+  }, 0);
+  const currentMonthComparisonBalance = getBalanceThroughDay(currentYear, currentMonth);
+  const previousMonthBalance = getBalanceThroughDay(previousYear, previousMonth);
+  const balanceDifference = currentMonthComparisonBalance - previousMonthBalance;
+  const balanceDifferencePercent =
+    previousMonthBalance === 0
+      ? null
+      : (balanceDifference / Math.abs(previousMonthBalance)) * 100;
 
   // สร้างข้อมูลสำหรับปฏิทิน
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
@@ -175,6 +231,7 @@ function DailyPage({ theme }) {
 
     const isExcluded = 
       exclusionList.includes(exp.category) ||
+      isSavingsExpense(exp) ||
       (exp.note && (
         exp.note.includes("(เงินสด)") ||
         exp.note.includes("(ไม่ต้องคิด)") ||
@@ -490,7 +547,12 @@ function DailyPage({ theme }) {
                       </span>
                       <div className="item-details">
                         <span className="item-note">{item.note || "-"}</span>
-                        <span className="item-cat">{item.category}</span>
+                        <div className="item-meta-row">
+                          <span className="item-cat">{item.category}</span>
+                          {isSavingsExpense(item) && (
+                            <span className="item-funding-badge">เงินเก็บ</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <span
@@ -530,7 +592,12 @@ function DailyPage({ theme }) {
                             </span>
                             <div className="item-details">
                               <span className="item-note">{item.note || "-"}</span>
-                              <span className="item-cat">{item.category}</span>
+                              <div className="item-meta-row">
+                                <span className="item-cat">{item.category}</span>
+                                {isSavingsExpense(item) && (
+                                  <span className="item-funding-badge">เงินเก็บ</span>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <span
@@ -576,7 +643,7 @@ function DailyPage({ theme }) {
         <div className="search-bar" style={{ display: "flex", gap: "10px", justifyContent: "center", alignItems: "center" }}>
           <input
             type="text"
-            placeholder="ค้นหา (หัวข้อ, คำอธิบาย)..."
+            placeholder="ค้นหา (หมวดหมู่, คำอธิบาย, เงินเดือน/เงินเก็บ)..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{ margin: 0 }}
@@ -651,6 +718,42 @@ function DailyPage({ theme }) {
               {formatNumber(totalBalance)}
             </span>
           </div>
+        </div>
+        <div className="balance-comparison-wrap">
+          <button
+            type="button"
+            className="balance-comparison-btn"
+            aria-expanded={showBalanceComparison}
+            onClick={() => setShowBalanceComparison((prev) => !prev)}
+          >
+            ⇄ เปรียบเทียบคงเหลือกับเดือนก่อน
+          </button>
+          {showBalanceComparison && (
+            <div className="balance-comparison-panel">
+              <div className="comparison-months">
+                <div>
+                  <span>1–{comparisonDay} {thaiMonths[previousMonth]} {previousYear + 543}</span>
+                  <strong>{formatNumber(previousMonthBalance)} ฿</strong>
+                </div>
+                <span className="comparison-arrow">→</span>
+                <div>
+                  <span>1–{comparisonDay} {thaiMonths[currentMonth]} {currentYear + 543}</span>
+                  <strong>{formatNumber(currentMonthComparisonBalance)} ฿</strong>
+                </div>
+              </div>
+              <div className={`comparison-result ${balanceDifference < 0 ? "down" : "up"}`}>
+                <span>ส่วนต่าง</span>
+                <strong>
+                  {balanceDifference > 0 ? "+" : ""}{formatNumber(balanceDifference)} ฿
+                </strong>
+                <span className="comparison-percent">
+                  {balanceDifferencePercent === null
+                    ? "คำนวณเปอร์เซ็นต์ไม่ได้ (เดือนก่อนคงเหลือ 0 ฿)"
+                    : `${balanceDifferencePercent > 0 ? "+" : ""}${balanceDifferencePercent.toLocaleString("th-TH", { maximumFractionDigits: 2 })}%`}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -878,7 +981,8 @@ function DailyPage({ theme }) {
             !exclusionList.includes(e.category) &&
             !(e.note && e.note.includes("(ไม่ต้องคิด)")) &&
             !(e.note && e.note.includes("(เงินสด)")) &&
-            !(e.note && e.note.includes("(~)")),
+            !(e.note && e.note.includes("(~)")) &&
+            !isSavingsExpense(e),
         ).length > 0 ? (
           <ExpenseChart
             expenses={filteredExpenses.filter(
@@ -887,7 +991,8 @@ function DailyPage({ theme }) {
                 !exclusionList.includes(e.category) &&
                 !(e.note && e.note.includes("(ไม่ต้องคิด)")) &&
                 !(e.note && e.note.includes("(เงินสด)")) &&
-                !(e.note && e.note.includes("(~)")),
+                !(e.note && e.note.includes("(~)")) &&
+                !isSavingsExpense(e),
             )}
           />
         ) : (
@@ -909,8 +1014,10 @@ function DailyPage({ theme }) {
                     <th>เดือน / ปี</th>
                     <th>รายรับ</th>
                     <th>รายจ่าย</th>
+                    <th>ใช้เงินเก็บ</th>
                     <th>คงเหลือ</th>
-                    <th>เงินเก็บเดือนก่อน</th>
+                    <th>เงินเก็บเดือนก่อน (หลังหักที่ใช้)</th>
+                    <th>เงินเก็บสะสม</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -921,6 +1028,7 @@ function DailyPage({ theme }) {
                       </td>
                       <td className="inc-text">+{formatNumber(m.income)}</td>
                       <td className="exp-text">-{formatNumber(m.expense)}</td>
+                      <td style={{ color: "#b45309" }}>-{formatNumber(m.savingsUsed)}</td>
                       <td
                         style={{
                           fontWeight: "bold",
@@ -930,7 +1038,10 @@ function DailyPage({ theme }) {
                         {formatNumber(m.balance)}
                       </td>
                       <td style={{ fontWeight: "bold", color: "#6e6e6e" }}>
-                        {formatNumber(m.prevCumulative)}
+                        {formatNumber(m.savingsBalanceAfterUse)}
+                      </td>
+                      <td style={{ fontWeight: "bold", color: m.cumulativeAfter < 0 ? "#e74c3c" : "#059669" }}>
+                        {formatNumber(m.cumulativeAfter)}
                       </td>
                     </tr>
                   ))}
@@ -944,6 +1055,9 @@ function DailyPage({ theme }) {
                     <td className="exp-text">
                       -{formatNumber(totalAllMonthsExpense)}
                     </td>
+                    <td style={{ color: "#b45309" }}>
+                      -{formatNumber(allMonthsList.reduce((sum, m) => sum + m.savingsUsed, 0))}
+                    </td>
                     <td
                       style={{
                         color:
@@ -953,6 +1067,7 @@ function DailyPage({ theme }) {
                       {formatNumber(totalAllMonthsBalance)}
                     </td>
                     <td>-</td>
+                    <td>{formatNumber(totalAllMonthsBalance)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -1096,6 +1211,79 @@ function DailyPage({ theme }) {
         .val.inc { color: #10b981; }
         .val.exp { color: #ef4444; }
         .val.bal { color: #3b82f6; }
+
+        .balance-comparison-wrap {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          margin-top: 18px;
+        }
+        .balance-comparison-btn {
+          border: 1px solid var(--border);
+          border-radius: 999px;
+          padding: 10px 18px;
+          background: var(--card);
+          color: var(--text);
+          font: inherit;
+          font-weight: 600;
+          cursor: pointer;
+          transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .balance-comparison-btn:hover {
+          transform: translateY(-2px);
+          border-color: var(--primary);
+          box-shadow: var(--shadow-soft);
+        }
+        .balance-comparison-panel {
+          width: min(100%, 620px);
+          margin-top: 14px;
+          padding: 16px;
+          border: 1px solid var(--border-soft);
+          border-radius: 16px;
+          background: var(--card);
+        }
+        .comparison-months {
+          display: grid;
+          grid-template-columns: 1fr auto 1fr;
+          align-items: center;
+          gap: 14px;
+        }
+        .comparison-months > div {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          text-align: center;
+        }
+        .comparison-months span {
+          color: var(--muted);
+          font-size: 0.85rem;
+        }
+        .comparison-months strong {
+          font-size: 1.1rem;
+        }
+        .comparison-arrow {
+          font-size: 1.25rem !important;
+        }
+        .comparison-result {
+          display: flex;
+          align-items: baseline;
+          justify-content: center;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 14px;
+          padding-top: 14px;
+          border-top: 1px dashed var(--border);
+          color: #10b981;
+        }
+        .comparison-result.down { color: #ef4444; }
+        .comparison-result > span:first-child { color: var(--muted); }
+        .comparison-percent {
+          padding: 3px 9px;
+          border-radius: 999px;
+          background: var(--soft);
+          color: inherit;
+          font-size: 0.85rem;
+        }
 
         /* --- General Cards --- */
         .card {
@@ -1384,6 +1572,22 @@ function DailyPage({ theme }) {
           border-radius: 10px;
           width: fit-content;
           margin-top: 4px;
+        }
+        .item-meta-row {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 4px;
+        }
+        .item-meta-row .item-cat { margin-top: 0; }
+        .item-funding-badge {
+          padding: 2px 8px;
+          border-radius: 10px;
+          background: #fef3c7;
+          color: #b45309;
+          font-size: 0.8rem;
+          font-weight: 700;
         }
         .dot-inc { color: #10b981; font-size: 1.2rem; }
         .dot-exp { color: #ef4444; font-size: 1.2rem; }
