@@ -33,6 +33,7 @@ function DailyPage({ theme }) {
   const [helpModalOpen, setHelpModalOpen] = useState(false); // State สำหรับ Help Modal
   const [searchTerm, setSearchTerm] = useState(""); // State สำหรับการค้นหา
   const [showBalanceComparison, setShowBalanceComparison] = useState(false);
+  const [comparisonModalOpen, setComparisonModalOpen] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -214,6 +215,65 @@ function DailyPage({ theme }) {
     previousMonthBalance === 0
       ? null
       : (balanceDifference / Math.abs(previousMonthBalance)) * 100;
+
+  const getCategoryTotalsThroughDay = (year, month) =>
+    expenses.reduce((totals, exp) => {
+      const d = new Date(exp.date);
+      if (
+        d.getMonth() !== month ||
+        d.getFullYear() !== year ||
+        d.getDate() > comparisonDay ||
+        !isIncludedForComparison(exp)
+      ) return totals;
+
+      const key = `${exp.type}-${exp.category || "ไม่ระบุหมวดหมู่"}`;
+      totals[key] = (totals[key] || 0) + (parseFloat(exp.amount) || 0);
+      return totals;
+    }, {});
+
+  const currentCategoryTotals = getCategoryTotalsThroughDay(currentYear, currentMonth);
+  const previousCategoryTotals = getCategoryTotalsThroughDay(previousYear, previousMonth);
+  const getComparisonCategoryItems = (year, month, type, category) =>
+    expenses
+      .filter((exp) => {
+        const d = new Date(exp.date);
+        return (
+          d.getMonth() === month &&
+          d.getFullYear() === year &&
+          d.getDate() <= comparisonDay &&
+          isIncludedForComparison(exp) &&
+          exp.type === type &&
+          (exp.category || "ไม่ระบุหมวดหมู่") === category
+        );
+      })
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+  const comparisonCategories = [
+    ...new Set([
+      ...Object.keys(currentCategoryTotals),
+      ...Object.keys(previousCategoryTotals),
+    ]),
+  ]
+    .map((key) => {
+      const separatorIndex = key.indexOf("-");
+      const type = key.slice(0, separatorIndex);
+      const category = key.slice(separatorIndex + 1);
+      const current = currentCategoryTotals[key] || 0;
+      const previous = previousCategoryTotals[key] || 0;
+      return {
+        key,
+        type,
+        category,
+        current,
+        previous,
+        difference: current - previous,
+        currentItems: getComparisonCategoryItems(currentYear, currentMonth, type, category),
+        previousItems: getComparisonCategoryItems(previousYear, previousMonth, type, category),
+      };
+    })
+    .sort((a, b) => {
+      if (a.type !== b.type) return a.type === "expense" ? -1 : 1;
+      return Math.max(b.current, b.previous) - Math.max(a.current, a.previous);
+    });
 
   // สร้างข้อมูลสำหรับปฏิทิน
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
@@ -415,6 +475,86 @@ function DailyPage({ theme }) {
                 - หากหมวดหมู่คือ <b>"ชาร์จรถ"</b> ระบบจะข้ามการคำนวณอัตโนมัติและแสดงไอคอน 🚗 ในปฏิทิน<br />
                 - หมวดหมู่ <b>"ของกิน", "ของใช้ประจำวัน", "บันเทิง"</b> หากใช้จ่ายเกิน 100 บาท จะมี 🌟 สีส้ม, หากเกิน 200 บาท จะมี 🌟 สีแดง แจ้งเตือนในปฏิทิน
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- Category Comparison Modal --- */}
+      {comparisonModalOpen && (
+        <div className="modal-overlay" onClick={() => setComparisonModalOpen(false)}>
+          <div
+            className="modal-content comparison-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h3>⇄ เปรียบเทียบรายหมวดหมู่</h3>
+              <button
+                type="button"
+                className="close-btn"
+                aria-label="ปิด"
+                onClick={() => setComparisonModalOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p className="comparison-modal-period">
+                วันที่ 1–{comparisonDay} ของ {thaiMonths[previousMonth]} และ {thaiMonths[currentMonth]}
+              </p>
+              {comparisonCategories.length > 0 ? (
+                <div className="category-comparison-list">
+                  <div className="category-comparison-head">
+                    <span>หมวดหมู่</span>
+                    <span>{thaiMonths[previousMonth]}</span>
+                    <span>{thaiMonths[currentMonth]}</span>
+                    <span>ส่วนต่าง</span>
+                  </div>
+                  {comparisonCategories.map((item) => (
+                    <details className="category-comparison-row" key={item.key}>
+                      <summary className="category-comparison-summary">
+                        <span className="category-comparison-name">
+                          <small>{item.type === "income" ? "รายรับ" : "รายจ่าย"}</small>
+                          <span>{item.category} <small className="tap-hint">กดดูรายละเอียด</small></span>
+                        </span>
+                        <span className="category-comparison-value">
+                          <small>{thaiMonths[previousMonth]}</small>
+                          {formatNumber(item.previous)} ฿
+                        </span>
+                        <span className="category-comparison-value">
+                          <small>{thaiMonths[currentMonth]}</small>
+                          {formatNumber(item.current)} ฿
+                        </span>
+                        <strong className={`category-comparison-value ${item.difference > 0 ? "difference-up" : item.difference < 0 ? "difference-down" : ""}`}>
+                          <small>ส่วนต่าง</small>
+                          {item.difference > 0 ? "+" : ""}{formatNumber(item.difference)} ฿
+                        </strong>
+                      </summary>
+                      <div className="comparison-item-groups">
+                        {[
+                          { label: `${thaiMonths[previousMonth]} ${previousYear + 543}`, items: item.previousItems },
+                          { label: `${thaiMonths[currentMonth]} ${currentYear + 543}`, items: item.currentItems },
+                        ].map((group) => (
+                          <div className="comparison-item-group" key={group.label}>
+                            <h4>{group.label}</h4>
+                            {group.items.length > 0 ? group.items.map((entry, index) => (
+                              <div className="comparison-entry" key={entry.id || `${entry.date}-${index}`}>
+                                <span>{new Date(entry.date).getDate()} {thaiMonths[new Date(entry.date).getMonth()].substring(0, 3)}</span>
+                                <span>{entry.note || "ไม่มีคำอธิบาย"}</span>
+                                <strong>{formatNumber(entry.amount)} ฿</strong>
+                              </div>
+                            )) : (
+                              <p className="comparison-no-items">ไม่มีรายการ</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              ) : (
+                <p className="comparison-empty">ยังไม่มีข้อมูลหมวดหมู่ในช่วงเวลานี้</p>
+              )}
             </div>
           </div>
         </div>
@@ -752,6 +892,13 @@ function DailyPage({ theme }) {
                     : `${balanceDifferencePercent > 0 ? "+" : ""}${balanceDifferencePercent.toLocaleString("th-TH", { maximumFractionDigits: 2 })}%`}
                 </span>
               </div>
+              <button
+                type="button"
+                className="comparison-detail-btn"
+                onClick={() => setComparisonModalOpen(true)}
+              >
+                รายละเอียด
+              </button>
             </div>
           )}
         </div>
@@ -1284,6 +1431,132 @@ function DailyPage({ theme }) {
           color: inherit;
           font-size: 0.85rem;
         }
+        .comparison-detail-btn {
+          display: block;
+          margin: 14px auto 0;
+          padding: 9px 20px;
+          border: none;
+          border-radius: 999px;
+          background: var(--primary);
+          color: white;
+          font: inherit;
+          font-weight: 700;
+          cursor: pointer;
+          transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+        .comparison-detail-btn:hover {
+          transform: translateY(-2px);
+          opacity: 0.9;
+        }
+        .comparison-modal {
+          width: calc(100vw - 48px);
+          max-width: 1200px;
+          height: calc(100dvh - 48px);
+          max-height: 960px;
+        }
+        .comparison-modal .modal-body {
+          overflow-x: hidden;
+          overflow-y: auto;
+          padding: 14px 18px 18px;
+          max-height: none;
+          height: calc(100% - 65px);
+        }
+        .comparison-modal-period {
+          margin: 0 0 14px;
+          color: var(--muted);
+          text-align: center;
+        }
+        .category-comparison-list {
+          width: 100%;
+          min-width: 0;
+          border: none;
+          border-radius: 0;
+          overflow: visible;
+        }
+        .category-comparison-summary {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 7px;
+          align-items: center;
+          padding: 12px 14px;
+          cursor: pointer;
+          list-style: none;
+        }
+        .category-comparison-summary::-webkit-details-marker { display: none; }
+        .category-comparison-head {
+          display: none;
+        }
+        .category-comparison-row {
+          margin-bottom: 10px;
+          border: 1px solid var(--border-soft);
+          border-radius: 12px;
+          background: var(--card);
+          overflow: hidden;
+        }
+        .category-comparison-summary > span:not(:first-child),
+        .category-comparison-summary > strong { text-align: left; }
+        .category-comparison-name {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          padding-bottom: 8px;
+          border-bottom: 1px dashed var(--border);
+          font-weight: 600;
+        }
+        .category-comparison-name small {
+          color: var(--muted);
+          font-size: 0.72rem;
+          font-weight: 500;
+        }
+        .category-comparison-name .tap-hint {
+          margin-left: 6px;
+          color: var(--primary);
+        }
+        .category-comparison-value {
+          display: flex;
+          min-width: 0;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+        }
+        .category-comparison-value small {
+          display: block;
+          color: var(--muted);
+          font-size: 0.78rem;
+          font-weight: 500;
+        }
+        .difference-up { color: #ef4444; }
+        .difference-down { color: #10b981; }
+        .comparison-empty { color: var(--muted); text-align: center; }
+        .comparison-item-groups {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 12px;
+          padding: 0 14px 14px;
+          border-top: 1px solid var(--border-soft);
+          background: color-mix(in oklab, var(--card) 86%, var(--bg));
+        }
+        .comparison-item-group h4 {
+          margin: 12px 0 6px;
+          color: var(--text);
+          font-size: 0.9rem;
+        }
+        .comparison-entry {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          gap: 8px;
+          padding: 8px 0;
+          border-bottom: 1px dashed var(--border);
+          font-size: 0.82rem;
+        }
+        .comparison-entry > span:first-child { color: var(--muted); }
+        .comparison-entry > span:nth-child(2) { overflow-wrap: anywhere; }
+        .comparison-entry strong { white-space: nowrap; }
+        .comparison-no-items {
+          margin: 8px 0;
+          color: var(--muted);
+          font-size: 0.82rem;
+        }
 
         /* --- General Cards --- */
         .card {
@@ -1765,6 +2038,70 @@ function DailyPage({ theme }) {
           }
           .modal-header {
             border-radius: 24px 24px 0 0;
+          }
+          .comparison-modal {
+            width: calc(100% - 8px);
+            max-width: none;
+            height: auto;
+            max-height: calc(100dvh - 8px);
+            border-radius: 14px;
+          }
+          .comparison-modal .modal-header {
+            padding: 13px 16px;
+            border-radius: 14px 14px 0 0;
+          }
+          .comparison-modal .modal-header h3 { font-size: 1rem; }
+          .comparison-modal .modal-body {
+            padding: 10px 12px 14px;
+            max-height: calc(100dvh - 58px);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+          }
+          .comparison-modal-period {
+            margin-bottom: 10px;
+            font-size: 0.78rem;
+          }
+          .category-comparison-list {
+            border: none;
+            border-radius: 0;
+            overflow: visible;
+          }
+          .category-comparison-head { display: none; }
+          .category-comparison-row {
+            margin-bottom: 8px;
+            border: 1px solid var(--border-soft);
+            border-radius: 12px;
+            background: var(--card);
+          }
+          .category-comparison-summary { padding: 10px; }
+          .category-comparison-row:first-of-type { border-top: 1px solid var(--border-soft); }
+          .category-comparison-name {
+            padding-bottom: 7px;
+            border-bottom: 1px dashed var(--border);
+            font-size: 0.9rem;
+          }
+          .category-comparison-summary > span:not(:first-child),
+          .category-comparison-summary > strong { text-align: left; }
+          .category-comparison-value {
+            display: flex;
+            min-width: 0;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            white-space: normal;
+          }
+          .category-comparison-value small {
+            display: block;
+            color: var(--muted);
+            font-size: 0.75rem;
+            font-weight: 500;
+          }
+          .comparison-item-groups {
+            grid-template-columns: 1fr;
+            gap: 0;
+            padding: 0 10px 10px;
           }
           
           /* Tables Mobile */
