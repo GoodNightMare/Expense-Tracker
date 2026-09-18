@@ -7,6 +7,7 @@ import API_URL from './api/index.js'
 import { initialDemoData } from './api/mockData.js'
 
 const TOKEN_STORAGE_KEY = 'app_token'
+const ACCOUNT_STORAGE_KEY = 'app_account'
 const THEME_STORAGE_KEY = 'theme'
 const DEMO_STORAGE_KEY = 'is_demo'
 const DEMO_DATA_KEY = 'demo_expenses'
@@ -25,58 +26,72 @@ function setAxiosAuthToken(token) {
   delete axios.defaults.headers.common.Authorization
 }
 
-function useAuthFromLocalStorage() {
-  const [isAuth, setIsAuth] = useState(false)
-  const [isDemo, setIsDemo] = useState(false)
-
-  useEffect(() => {
-    const savedToken = localStorage.getItem(TOKEN_STORAGE_KEY)
-    const savedIsDemo = localStorage.getItem(DEMO_STORAGE_KEY) === 'true'
-    
-    if (savedIsDemo) {
-      setIsDemo(true)
-      setIsAuth(true)
-      return
+function getInitialAuthSession() {
+  const isDemo = localStorage.getItem(DEMO_STORAGE_KEY) === 'true'
+  if (isDemo) {
+    return {
+      isAuth: true,
+      isDemo: true,
+      account: { id: 'demo', name: 'บัญชีทดลอง' },
     }
+  }
 
-    if (!savedToken) return
-    setAxiosAuthToken(savedToken)
-    setIsAuth(true)
-  }, [])
+  const token = localStorage.getItem(TOKEN_STORAGE_KEY)
+  if (!token) return { isAuth: false, isDemo: false, account: null }
+
+  let account = null
+  try {
+    account = JSON.parse(localStorage.getItem(ACCOUNT_STORAGE_KEY))
+  } catch {
+    localStorage.removeItem(ACCOUNT_STORAGE_KEY)
+  }
+
+  setAxiosAuthToken(token)
+  return { isAuth: true, isDemo: false, account }
+}
+
+function useAuthFromLocalStorage() {
+  const [session, setSession] = useState(getInitialAuthSession)
 
   const login = async (password) => {
     const response = await axios.post(`${API_URL}/login`, { password })
     if (!response?.data?.success) return false
 
     const token = response.data.token
+    const loggedInAccount = response.data.account || { id: 'account1', name: 'บัญชี 1' }
     localStorage.setItem(TOKEN_STORAGE_KEY, token)
+    localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(loggedInAccount))
     localStorage.setItem(DEMO_STORAGE_KEY, 'false')
     setAxiosAuthToken(token)
-    setIsDemo(false)
-    setIsAuth(true)
+    setSession({ isAuth: true, isDemo: false, account: loggedInAccount })
     return true
   }
 
   const demoLogin = () => {
     localStorage.setItem(DEMO_STORAGE_KEY, 'true')
     localStorage.removeItem(TOKEN_STORAGE_KEY)
+    localStorage.removeItem(ACCOUNT_STORAGE_KEY)
     if (!localStorage.getItem(DEMO_DATA_KEY)) {
       console.log(initialDemoData)
       localStorage.setItem(DEMO_DATA_KEY, JSON.stringify(initialDemoData))
     }
-    setIsDemo(true)
-    setIsAuth(true)
+    setAxiosAuthToken(null)
+    setSession({
+      isAuth: true,
+      isDemo: true,
+      account: { id: 'demo', name: 'บัญชีทดลอง' },
+    })
   }
 
   const logout = () => {
     localStorage.removeItem(TOKEN_STORAGE_KEY)
+    localStorage.removeItem(ACCOUNT_STORAGE_KEY)
     localStorage.removeItem(DEMO_STORAGE_KEY)
     setAxiosAuthToken(null)
-    setIsDemo(false)
-    setIsAuth(false)
+    setSession({ isAuth: false, isDemo: false, account: null })
   }
 
-  return { isAuth, isDemo, login, demoLogin, logout }
+  return { ...session, login, demoLogin, logout }
 }
 
 function LoginScreen({ onLogin, onDemo }) {
