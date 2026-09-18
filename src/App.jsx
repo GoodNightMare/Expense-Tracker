@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
 import axios from 'axios'
 import DailyPage from './pages/DailyPage.jsx'
@@ -11,6 +11,53 @@ const ACCOUNT_STORAGE_KEY = 'app_account'
 const THEME_STORAGE_KEY = 'theme'
 const DEMO_STORAGE_KEY = 'is_demo'
 const DEMO_DATA_KEY = 'demo_expenses'
+const PROFILE_IMAGE_KEY = 'profile_image'
+const PROFILE_NAME_KEY = 'profile_name'
+const MAX_PROFILE_SOURCE_SIZE = 10 * 1024 * 1024
+const PROFILE_IMAGE_DIMENSION = 512
+
+function resizeProfileImage(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    const objectUrl = URL.createObjectURL(file)
+
+    image.onload = () => {
+      const cropSize = Math.min(image.naturalWidth, image.naturalHeight)
+      const sourceX = (image.naturalWidth - cropSize) / 2
+      const sourceY = (image.naturalHeight - cropSize) / 2
+      const canvas = document.createElement('canvas')
+      canvas.width = PROFILE_IMAGE_DIMENSION
+      canvas.height = PROFILE_IMAGE_DIMENSION
+
+      const context = canvas.getContext('2d')
+      if (!context) {
+        URL.revokeObjectURL(objectUrl)
+        reject(new Error('Canvas is unavailable'))
+        return
+      }
+
+      context.drawImage(
+        image,
+        sourceX,
+        sourceY,
+        cropSize,
+        cropSize,
+        0,
+        0,
+        PROFILE_IMAGE_DIMENSION,
+        PROFILE_IMAGE_DIMENSION,
+      )
+      URL.revokeObjectURL(objectUrl)
+      resolve(canvas.toDataURL('image/webp', 0.82))
+    }
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('Invalid image'))
+    }
+    image.src = objectUrl
+  })
+}
 
 function getInitialTheme() {
   const saved = localStorage.getItem(THEME_STORAGE_KEY)
@@ -242,8 +289,147 @@ function LoginScreen({ onLogin, onDemo }) {
   )
 }
 
+function ProfileMenu({ accountName, onLogout }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [profileImage, setProfileImage] = useState(() => localStorage.getItem(PROFILE_IMAGE_KEY))
+  const [profileName, setProfileName] = useState(() => localStorage.getItem(PROFILE_NAME_KEY) || accountName || 'บัญชีของฉัน')
+  const [nameDraft, setNameDraft] = useState(profileName)
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [imageError, setImageError] = useState('')
+  const menuRef = useRef(null)
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    if (!isOpen) return undefined
+
+    const closeMenu = (event) => {
+      if (!menuRef.current?.contains(event.target)) setIsOpen(false)
+    }
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setIsOpen(false)
+    }
+
+    document.addEventListener('pointerdown', closeMenu)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeMenu)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [isOpen])
+
+  const handleImageChange = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setImageError('รองรับเฉพาะไฟล์ JPG, PNG และ WebP')
+      return
+    }
+    if (file.size > MAX_PROFILE_SOURCE_SIZE) {
+      setImageError('กรุณาเลือกรูปต้นฉบับขนาดไม่เกิน 10 MB')
+      return
+    }
+
+    try {
+      const resizedImage = await resizeProfileImage(file)
+      localStorage.setItem(PROFILE_IMAGE_KEY, resizedImage)
+      setProfileImage(resizedImage)
+      setImageError('')
+    } catch (error) {
+      if (error?.name === 'QuotaExceededError') {
+        setImageError('พื้นที่จัดเก็บไม่เพียงพอ กรุณาลบข้อมูลเว็บไซต์บางส่วน')
+      } else {
+        setImageError('ไม่สามารถประมวลผลไฟล์รูปได้')
+      }
+    }
+  }
+
+  const removeImage = () => {
+    localStorage.removeItem(PROFILE_IMAGE_KEY)
+    setProfileImage(null)
+    setImageError('')
+  }
+
+  const saveName = (event) => {
+    event.preventDefault()
+    const nextName = nameDraft.trim()
+    if (!nextName) return
+
+    localStorage.setItem(PROFILE_NAME_KEY, nextName)
+    setProfileName(nextName)
+    setNameDraft(nextName)
+    setIsEditingName(false)
+  }
+
+  const cancelNameEdit = () => {
+    setNameDraft(profileName)
+    setIsEditingName(false)
+  }
+
+  const initial = profileName.trim().charAt(0).toUpperCase() || 'บ'
+
+  return (
+    <div className="profile-menu" ref={menuRef}>
+      <button
+        type="button"
+        className="profile-trigger"
+        onClick={() => setIsOpen((open) => !open)}
+        aria-label="เปิดเมนูโปรไฟล์"
+        aria-expanded={isOpen}
+      >
+        {profileImage ? <img src={profileImage} alt="รูปโปรไฟล์" /> : <span>{initial}</span>}
+      </button>
+
+      {isOpen && (
+        <div className="profile-popover">
+          <div className="profile-header">
+            <div className="profile-preview">
+              {profileImage ? <img src={profileImage} alt="รูปโปรไฟล์" /> : <span>{initial}</span>}
+            </div>
+            <div className="profile-identity">
+              {isEditingName ? (
+                <form className="profile-name-form" onSubmit={saveName}>
+                  <input
+                    value={nameDraft}
+                    onChange={(event) => setNameDraft(event.target.value)}
+                    maxLength={40}
+                    aria-label="ชื่อโปรไฟล์"
+                    autoFocus
+                  />
+                  <div className="profile-name-buttons">
+                    <button type="submit" disabled={!nameDraft.trim()}>บันทึก</button>
+                    <button type="button" onClick={cancelNameEdit}>ยกเลิก</button>
+                  </div>
+                </form>
+              ) : (
+                <div className="profile-name-row">
+                  <strong>{profileName}</strong>
+                  <button type="button" onClick={() => setIsEditingName(true)} aria-label="แก้ไขชื่อ">แก้ไข</button>
+                </div>
+              )}
+              <small>ข้อมูลนี้เก็บเฉพาะเครื่องนี้</small>
+            </div>
+          </div>
+
+          <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageChange} hidden />
+          <button type="button" className="profile-action primary" onClick={() => inputRef.current?.click()}>
+            {profileImage ? 'เปลี่ยนรูปโปรไฟล์' : 'เพิ่มรูปโปรไฟล์'}
+          </button>
+          {profileImage && (
+            <button type="button" className="profile-action danger" onClick={removeImage}>ลบรูปโปรไฟล์</button>
+          )}
+          {imageError && <p className="profile-error" role="alert">{imageError}</p>}
+          <div className="profile-divider" />
+          <button type="button" className="profile-action" onClick={onLogout}>ออกจากระบบ</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function App() {
-  const { isAuth, isDemo, login, demoLogin, logout } = useAuthFromLocalStorage()
+  const { isAuth, isDemo, account, login, demoLogin, logout } = useAuthFromLocalStorage()
   const [theme, setTheme] = useState(getInitialTheme)
 
   useEffect(() => {
@@ -333,18 +519,20 @@ function App() {
         </div>
       )}
       <nav className="navbar">
-        <NavLink to="/" className={({ isActive }) => isActive ? 'active' : ''}>📊 สรุปรายวัน</NavLink>
-        <NavLink to="/add" className={({ isActive }) => isActive ? 'active' : ''}>✏️ บันทึก</NavLink>
-        <button
-          type="button"
-          className="theme-nav-btn"
-          onClick={() => setTheme((t) => t === 'dark' ? 'light' : 'dark')}
-          aria-label={theme === 'dark' ? 'เปลี่ยนเป็นโหมดสว่าง' : 'เปลี่ยนเป็นโหมดมืด'}
-          title={theme === 'dark' ? 'โหมดมืด' : 'โหมดสว่าง'}
-        >
-          {theme === 'dark' ? '🌙' : '☀️'}
-        </button>
-        <button onClick={logout} className="logout-nav-btn">🚪</button>
+        <div className="nav-main">
+          <NavLink to="/" className={({ isActive }) => isActive ? 'active' : ''}>📊 สรุปรายวัน</NavLink>
+          <NavLink to="/add" className={({ isActive }) => isActive ? 'active' : ''}>✏️ บันทึก</NavLink>
+          <button
+            type="button"
+            className="theme-nav-btn"
+            onClick={() => setTheme((t) => t === 'dark' ? 'light' : 'dark')}
+            aria-label={theme === 'dark' ? 'เปลี่ยนเป็นโหมดสว่าง' : 'เปลี่ยนเป็นโหมดมืด'}
+            title={theme === 'dark' ? 'โหมดมืด' : 'โหมดสว่าง'}
+          >
+            {theme === 'dark' ? '🌙' : '☀️'}
+          </button>
+        </div>
+        <ProfileMenu accountName={account?.name} onLogout={logout} />
       </nav>
 
       <Routes>
@@ -353,8 +541,6 @@ function App() {
       </Routes>
 
       <style jsx>{`
-        .logout-nav-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 0 10px; opacity: 0.7; }
-        .logout-nav-btn:hover { opacity: 1; }
         .theme-nav-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 0 10px; opacity: 0.85; }
         .theme-nav-btn:hover { opacity: 1; }
         .demo-badge {

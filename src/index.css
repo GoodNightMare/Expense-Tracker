@@ -63,8 +63,9 @@ body {
 
 /* Navigation */
 .navbar {
-  display: flex;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 42px;
+  align-items: center;
   gap: 10px;
   margin-bottom: 30px;
   background: var(--nav-bg);
@@ -72,6 +73,90 @@ body {
   padding: 15px;
   border-radius: 15px;
   border: 1px solid var(--nav-border);
+}
+
+.nav-main {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.profile-menu { position: relative; grid-column: 3; justify-self: end; }
+
+.profile-trigger {
+  width: 42px; height: 42px; padding: 0; display: grid; place-items: center;
+  flex-shrink: 0; overflow: hidden; border: 2px solid var(--card); border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: white;
+  box-shadow: 0 0 0 2px var(--primary-bg), var(--shadow-soft);
+  font-size: 17px; font-weight: 700; cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.profile-trigger:hover { transform: translateY(-1px); box-shadow: 0 0 0 3px var(--primary-bg), var(--shadow); }
+.profile-trigger img, .profile-preview img { width: 100%; height: 100%; object-fit: cover; }
+
+.profile-popover {
+  position: absolute; z-index: 50; top: calc(100% + 12px); right: 0; width: 280px;
+  padding: 16px; border: 1px solid var(--border); border-radius: 16px;
+  background: var(--card); color: var(--text); box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+}
+
+.profile-popover::before {
+  content: ''; position: absolute; top: -6px; right: 15px; width: 12px; height: 12px;
+  border-top: 1px solid var(--border); border-left: 1px solid var(--border);
+  background: var(--card); transform: rotate(45deg);
+}
+
+.profile-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.profile-header > div:last-child { min-width: 0; }
+.profile-header strong, .profile-header small { display: block; }
+.profile-header strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-header small { margin-top: 3px; color: var(--muted); font-size: 12px; }
+
+.profile-identity { flex: 1; }
+.profile-name-row { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.profile-name-row strong { flex: 1; }
+.profile-name-row button, .profile-name-buttons button {
+  padding: 3px 6px; border: 0; border-radius: 6px; background: var(--soft);
+  color: var(--primary-2); font: inherit; font-size: 11px; cursor: pointer;
+}
+.profile-name-form input {
+  width: 100%; padding: 7px 9px; border: 1px solid var(--border); border-radius: 7px;
+  background: var(--card-2); color: var(--text); font: inherit; outline: none;
+}
+.profile-name-form input:focus { border-color: var(--primary); }
+.profile-name-buttons { display: flex; gap: 5px; margin-top: 6px; }
+.profile-name-buttons button:first-child { background: var(--primary); color: white; }
+.profile-name-buttons button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.profile-preview {
+  width: 52px; height: 52px; display: grid; place-items: center; flex-shrink: 0;
+  overflow: hidden; border-radius: 50%; background: var(--primary-bg);
+  color: var(--primary-2); font-size: 20px; font-weight: 700;
+}
+
+.profile-action {
+  width: 100%; padding: 10px 12px; border: 0; border-radius: 9px;
+  background: transparent; color: var(--text); text-align: left; font: inherit; cursor: pointer;
+}
+
+.profile-action:hover { background: var(--soft); }
+.profile-action.primary { color: var(--primary-2); font-weight: 600; }
+.profile-action.danger, .profile-error { color: #dc2626; }
+.profile-divider { height: 1px; margin: 8px 0; background: var(--border-soft); }
+.profile-error { margin: 7px 4px 2px; font-size: 12px; line-height: 1.4; }
+
+@media (max-width: 560px) {
+  .app-container { padding: 12px; }
+  .navbar { grid-template-columns: minmax(0, 1fr) 42px; gap: 5px; padding: 10px; }
+  .nav-main { grid-column: 1; gap: 4px; }
+  .profile-menu { grid-column: 2; }
+  .navbar a { padding: 9px 11px; font-size: 14px; }
+  .theme-nav-btn { padding: 0 5px !important; }
+  .profile-popover { position: fixed; top: 72px; right: 12px; width: min(280px, calc(100vw - 24px)); }
+  .profile-popover::before { display: none; }
 }
 
 .navbar a {
