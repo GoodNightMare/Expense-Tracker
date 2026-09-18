@@ -153,10 +153,20 @@ body {
   .navbar { grid-template-columns: minmax(0, 1fr) 42px; gap: 5px; padding: 10px; }
   .nav-main { grid-column: 1; gap: 4px; }
   .profile-menu { grid-column: 2; }
-  .navbar a { padding: 9px 11px; font-size: 14px; }
-  .theme-nav-btn { padding: 0 5px !important; }
+  .navbar .nav-main a { padding: 7px clamp(5px, 1.6vw, 8px); font-size: 16px; }
+  .theme-nav-btn { padding: 0 3px !important; font-size: 18px !important; }
   .profile-popover { position: fixed; top: 72px; right: 12px; width: min(280px, calc(100vw - 24px)); }
   .profile-popover::before { display: none; }
+}
+
+@media (max-width: 390px) {
+  .app-container { padding: 8px; }
+  .navbar { grid-template-columns: minmax(0, 1fr) 36px; padding: 8px; }
+  .nav-main { gap: 2px; }
+  .navbar .nav-main a { padding: 6px 4px; font-size: 16px; }
+  .theme-nav-btn { padding: 0 2px !important; font-size: 15px !important; }
+  .profile-trigger { width: 36px; height: 36px; font-size: 14px; }
+  .demo-badge { font-size: 11px !important; }
 }
 
 .navbar a {
@@ -165,7 +175,7 @@ body {
   padding: 10px 25px;
   border-radius: 10px;
   font-weight: bold;
-  font-size: 16px;
+  font-size: 20px;
   transition: all 0.3s;
 }
 
