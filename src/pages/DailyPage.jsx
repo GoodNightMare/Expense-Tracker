@@ -34,6 +34,9 @@ function DailyPage({ theme }) {
   const [searchTerm, setSearchTerm] = useState(""); // State สำหรับการค้นหา
   const [showBalanceComparison, setShowBalanceComparison] = useState(false);
   const [comparisonModalOpen, setComparisonModalOpen] = useState(false);
+  const [selectedComparisonDay, setSelectedComparisonDay] = useState(
+    new Date().getDate(),
+  );
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -181,11 +184,10 @@ function DailyPage({ theme }) {
   const previousMonthDate = new Date(currentYear, currentMonth - 1, 1);
   const previousMonth = previousMonthDate.getMonth();
   const previousYear = previousMonthDate.getFullYear();
-  const comparisonDay = Math.min(
-    new Date().getDate(),
-    new Date(currentYear, currentMonth + 1, 0).getDate(),
-    new Date(previousYear, previousMonth + 1, 0).getDate(),
-  );
+  const currentMonthDays = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const previousMonthDays = new Date(previousYear, previousMonth + 1, 0).getDate();
+  const comparisonDay = Math.min(selectedComparisonDay, currentMonthDays);
+  const previousComparisonDay = Math.min(comparisonDay, previousMonthDays);
   const isIncludedForComparison = (exp) => {
     return !(
       exclusionList.includes(exp.category) ||
@@ -196,33 +198,41 @@ function DailyPage({ theme }) {
           exp.note.includes("(~)")))
     );
   };
-  const getBalanceThroughDay = (year, month) => expenses.reduce((sum, exp) => {
+  const getBalanceThroughDay = (year, month, throughDay) => expenses.reduce((sum, exp) => {
     const d = new Date(exp.date);
     if (
       d.getMonth() !== month ||
       d.getFullYear() !== year ||
-      d.getDate() > comparisonDay ||
+      d.getDate() > throughDay ||
       !isIncludedForComparison(exp)
     ) return sum;
 
     const amount = parseFloat(exp.amount) || 0;
     return sum + (exp.type === "income" ? amount : -amount);
   }, 0);
-  const currentMonthComparisonBalance = getBalanceThroughDay(currentYear, currentMonth);
-  const previousMonthBalance = getBalanceThroughDay(previousYear, previousMonth);
+  const currentMonthComparisonBalance = getBalanceThroughDay(
+    currentYear,
+    currentMonth,
+    comparisonDay,
+  );
+  const previousMonthBalance = getBalanceThroughDay(
+    previousYear,
+    previousMonth,
+    previousComparisonDay,
+  );
   const balanceDifference = currentMonthComparisonBalance - previousMonthBalance;
   const balanceDifferencePercent =
     previousMonthBalance === 0
       ? null
       : (balanceDifference / Math.abs(previousMonthBalance)) * 100;
 
-  const getCategoryTotalsThroughDay = (year, month) =>
+  const getCategoryTotalsThroughDay = (year, month, throughDay) =>
     expenses.reduce((totals, exp) => {
       const d = new Date(exp.date);
       if (
         d.getMonth() !== month ||
         d.getFullYear() !== year ||
-        d.getDate() > comparisonDay ||
+        d.getDate() > throughDay ||
         !isIncludedForComparison(exp)
       ) return totals;
 
@@ -231,16 +241,24 @@ function DailyPage({ theme }) {
       return totals;
     }, {});
 
-  const currentCategoryTotals = getCategoryTotalsThroughDay(currentYear, currentMonth);
-  const previousCategoryTotals = getCategoryTotalsThroughDay(previousYear, previousMonth);
-  const getComparisonCategoryItems = (year, month, type, category) =>
+  const currentCategoryTotals = getCategoryTotalsThroughDay(
+    currentYear,
+    currentMonth,
+    comparisonDay,
+  );
+  const previousCategoryTotals = getCategoryTotalsThroughDay(
+    previousYear,
+    previousMonth,
+    previousComparisonDay,
+  );
+  const getComparisonCategoryItems = (year, month, throughDay, type, category) =>
     expenses
       .filter((exp) => {
         const d = new Date(exp.date);
         return (
           d.getMonth() === month &&
           d.getFullYear() === year &&
-          d.getDate() <= comparisonDay &&
+          d.getDate() <= throughDay &&
           isIncludedForComparison(exp) &&
           exp.type === type &&
           (exp.category || "ไม่ระบุหมวดหมู่") === category
@@ -266,8 +284,8 @@ function DailyPage({ theme }) {
         current,
         previous,
         difference: current - previous,
-        currentItems: getComparisonCategoryItems(currentYear, currentMonth, type, category),
-        previousItems: getComparisonCategoryItems(previousYear, previousMonth, type, category),
+        currentItems: getComparisonCategoryItems(currentYear, currentMonth, comparisonDay, type, category),
+        previousItems: getComparisonCategoryItems(previousYear, previousMonth, previousComparisonDay, type, category),
       };
     })
     .sort((a, b) => {
@@ -500,7 +518,7 @@ function DailyPage({ theme }) {
             </div>
             <div className="modal-body">
               <p className="comparison-modal-period">
-                วันที่ 1–{comparisonDay} ของ {thaiMonths[previousMonth]} และ {thaiMonths[currentMonth]}
+                วันที่ 1–{previousComparisonDay} ของ {thaiMonths[previousMonth]} และวันที่ 1–{comparisonDay} ของ {thaiMonths[currentMonth]}
               </p>
               {comparisonCategories.length > 0 ? (
                 <div className="category-comparison-list">
@@ -870,9 +888,20 @@ function DailyPage({ theme }) {
           </button>
           {showBalanceComparison && (
             <div className="balance-comparison-panel">
+              <label className="comparison-day-picker">
+                <span>เลือกวันที่ที่ต้องการเปรียบเทียบ</span>
+                <select
+                  value={comparisonDay}
+                  onChange={(e) => setSelectedComparisonDay(Number(e.target.value))}
+                >
+                  {Array.from({ length: currentMonthDays }, (_, index) => index + 1).map(
+                    (day) => <option key={day} value={day}>วันที่ {day}</option>,
+                  )}
+                </select>
+              </label>
               <div className="comparison-months">
                 <div>
-                  <span>1–{comparisonDay} {thaiMonths[previousMonth]} {previousYear + 543}</span>
+                  <span>1–{previousComparisonDay} {thaiMonths[previousMonth]} {previousYear + 543}</span>
                   <strong>{formatNumber(previousMonthBalance)} ฿</strong>
                 </div>
                 <span className="comparison-arrow">→</span>
@@ -1388,6 +1417,28 @@ function DailyPage({ theme }) {
           border: 1px solid var(--border-soft);
           border-radius: 16px;
           background: var(--card);
+        }
+        .comparison-day-picker {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 16px;
+          color: var(--muted);
+          font-size: 0.9rem;
+        }
+        .comparison-day-picker select {
+          width: auto;
+          min-width: 110px;
+          margin: 0;
+          padding: 8px 34px 8px 12px;
+          border: 1px solid var(--border);
+          border-radius: 10px;
+          background: var(--card);
+          color: var(--text);
+          font: inherit;
+          cursor: pointer;
         }
         .comparison-months {
           display: grid;
