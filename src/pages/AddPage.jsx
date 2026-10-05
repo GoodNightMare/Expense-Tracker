@@ -71,7 +71,7 @@ function AddPage() {
       category,
       date,
       note,
-      fundingSource: type === "expense" ? fundingSource : "salary",
+      fundingSource,
     };
 
     try {
@@ -123,12 +123,13 @@ function AddPage() {
 
   const handleEdit = (item) => {
     // นำข้อมูลมาใส่ในฟอร์ม
-    setType(item.type);
+    // รองรับรายการเพิ่มเงินเก็บรูปแบบเดิม โดยเปิดแก้ไขเป็นรายรับเข้าเงินเก็บ
+    setType(item.type === "savings" ? "income" : item.type);
     setAmount(item.amount);
     setCategory(item.category);
     setDate(item.date);
     setNote(item.note || "");
-    setFundingSource(item.fundingSource || "salary");
+    setFundingSource(item.type === "savings" ? "savings" : (item.fundingSource || "salary"));
     setEditId(item.id);
     window.scrollTo({ top: 0, behavior: "smooth" }); // เลื่อนขึ้นไปหาฟอร์ม
   };
@@ -226,7 +227,8 @@ function AddPage() {
               className={`type-btn ${type === "income" ? "income-active" : ""}`}
               onClick={() => {
                 setType("income");
-                if (!editId) setCategory(""); // เคลียร์หมวดหมู่เฉพาะตอนไม่ได้แก้ไข
+                setCategory("");
+                setFundingSource("salary");
               }}
             >
               💰 รายรับ
@@ -235,7 +237,8 @@ function AddPage() {
               className={`type-btn ${type === "expense" ? "expense-active" : ""}`}
               onClick={() => {
                 setType("expense");
-                if (!editId) setCategory("");
+                setCategory("");
+                setFundingSource("salary");
               }}
             >
               💸 รายจ่าย
@@ -321,6 +324,33 @@ function AddPage() {
             </div>
           )}
 
+          {type === "income" && (
+            <div className="form-group">
+              <label>นำรายรับเข้า</label>
+              <div className="funding-toggle" role="group" aria-label="เลือกปลายทางรายรับ">
+                <button
+                  type="button"
+                  className={fundingSource === "salary" ? "active salary" : ""}
+                  aria-pressed={fundingSource === "salary"}
+                  onClick={() => setFundingSource("salary")}
+                >
+                  💵 เงินเดือน
+                </button>
+                <button
+                  type="button"
+                  className={fundingSource === "savings" ? "active savings" : ""}
+                  aria-pressed={fundingSource === "savings"}
+                  onClick={() => setFundingSource("savings")}
+                >
+                  🏦 เงินเก็บ
+                </button>
+              </div>
+              <small className="field-hint">
+                รายรับที่เข้าเงินเก็บจะเพิ่มยอดเงินเก็บโดยตรง และไม่รวมในสรุปรายเดือน
+              </small>
+            </div>
+          )}
+
           <div style={{ display: "flex", gap: "10px" }}>
             <button type="submit" className="submit-btn" style={{ flex: 1 }}>
               {editId ? "🔄 อัปเดต" : "💾 บันทึก"}
@@ -402,7 +432,7 @@ function AddPage() {
             <div className="transaction-item" key={exp.id}>
               <div className="transaction-info">
                 <span>
-                  {exp.type === "income" ? "🟢" : "🔴"}{" "}
+                  {exp.type === "income" ? "🟢" : exp.type === "savings" ? "🏦" : "🔴"}{" "}
                   {exp.note || exp.category}
                 </span>
                 <div className="transaction-meta">
@@ -412,14 +442,19 @@ function AddPage() {
                       {exp.fundingSource === "savings" ? "เงินเก็บ" : "เงินเดือน"}
                     </span>
                   )}
+                  {(exp.type === "income" || exp.type === "savings") && (
+                    <span className={`funding-badge ${exp.type === "savings" || exp.fundingSource === "savings" ? "savings" : "salary"}`}>
+                      {exp.type === "savings" || exp.fundingSource === "savings" ? "เข้าเงินเก็บ" : "เข้าเงินเดือน"}
+                    </span>
+                  )}
                 </div>
                 <span className="transaction-date">{exp.date}</span>
               </div>
               <div
                 style={{ display: "flex", alignItems: "center", gap: "10px" }}
               >
-                <span className={exp.type === "income" ? "income" : "expense"}>
-                  {exp.type === "income" ? "+" : "-"}
+                <span className={exp.type === "income" || exp.type === "savings" ? "income" : "expense"}>
+                  {exp.type === "income" || exp.type === "savings" ? "+" : "-"}
                   {formatNumber(exp.amount)} ฿
                 </span>
                 <button
@@ -513,7 +548,6 @@ function AddPage() {
           border-color: color-mix(in oklab, #ef4444 55%, var(--border));
           box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
         }
-
         .form-group { margin-bottom: 12px; }
         .funding-toggle {
           display: grid;

@@ -56,6 +56,14 @@ function DailyPage({ theme }) {
   };
 
   // --- Logic การคำนวณ ---
+  const exclusionList = ["ชาร์จรถ"];
+  const isSavingsExpense = (exp) =>
+    exp.type === "expense" && exp.fundingSource === "savings";
+  const isSavingsDeposit = (exp) =>
+    exp.type === "savings" ||
+    (exp.type === "income" && exp.fundingSource === "savings");
+
+  // แสดงรายการเงินเก็บในวันที่ แต่แยกออกจากการคำนวณรายเดือน
   const filteredExpenses = expenses.filter((exp) => {
     const d = new Date(exp.date);
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
@@ -83,10 +91,6 @@ function DailyPage({ theme }) {
   );
 
   // รายการที่ต้องยกเว้นไม่ให้รวมในสรุป (เช่น ค่าชาร์จรถ)
-  const exclusionList = ["ชาร์จรถ"];
-  const isSavingsExpense = (exp) =>
-    exp.type === "expense" && exp.fundingSource === "savings";
-
   // แยกข้อมูลที่ไม่เอามาคิดไว้ในอาร์เรย์เผื่อใช้งานภายหลัง
   const excludedItems = filteredExpenses.filter((e) =>
     exclusionList.includes(e.category),
@@ -96,6 +100,7 @@ function DailyPage({ theme }) {
   const includedExpenses = filteredExpenses.filter(
     (e) =>
       !exclusionList.includes(e.category) &&
+      !isSavingsDeposit(e) &&
       !isSavingsExpense(e) &&
       (!e.note ||
         (!e.note.includes("(เงินสด)") && 
@@ -121,10 +126,14 @@ function DailyPage({ theme }) {
     const key = `${year}-${month}`;
 
     if (!acc[key]) {
-      acc[key] = { year, month, income: 0, expense: 0, savingsUsed: 0, balance: 0 };
+      acc[key] = { year, month, income: 0, expense: 0, savingsAdded: 0, savingsUsed: 0, balance: 0 };
     }
 
     const amount = parseFloat(exp.amount) || 0;
+    if (isSavingsDeposit(exp)) {
+      acc[key].savingsAdded += amount;
+      return acc;
+    }
     if (isSavingsExpense(exp)) {
       acc[key].savingsUsed += amount;
       return acc;
@@ -148,7 +157,7 @@ function DailyPage({ theme }) {
   let runningBalance = 0;
   allMonthsListAsc.forEach((m) => {
     m.prevCumulative = runningBalance;
-    m.savingsBalanceAfterUse = m.prevCumulative - m.savingsUsed;
+    m.savingsBalanceAfterUse = m.prevCumulative + m.savingsAdded - m.savingsUsed;
     runningBalance = m.savingsBalanceAfterUse + m.balance;
     m.cumulativeAfter = runningBalance;
   });
@@ -167,7 +176,7 @@ function DailyPage({ theme }) {
     0,
   );
   const totalAllMonthsBalance = allMonthsList.reduce(
-    (sum, m) => sum + m.balance - m.savingsUsed,
+    (sum, m) => sum + m.balance + m.savingsAdded - m.savingsUsed,
     0,
   );
 
@@ -191,6 +200,7 @@ function DailyPage({ theme }) {
   const isIncludedForComparison = (exp) => {
     return !(
       exclusionList.includes(exp.category) ||
+      isSavingsDeposit(exp) ||
       isSavingsExpense(exp) ||
       (exp.note &&
         (exp.note.includes("(เงินสด)") ||
@@ -303,12 +313,15 @@ function DailyPage({ theme }) {
 
   // 1. จัดกลุ่มข้อมูล (Group By Category)
   // ใช้ข้อมูลของทั้งเดือน (filteredExpenses) เพื่อให้กราฟและ breakdown แสดงผลทุกรายการ
-  const categorySummary = filteredExpenses.reduce((acc, exp) => {
+  const categorySummary = filteredExpenses
+    .filter((exp) => !isSavingsDeposit(exp))
+    .reduce((acc, exp) => {
     const key = `${exp.type}-${exp.category}`;
     if (!acc[key]) acc[key] = { ...exp, total: 0, excludedTotal: 0, details: [] };
 
     const isExcluded = 
       exclusionList.includes(exp.category) ||
+      isSavingsDeposit(exp) ||
       isSavingsExpense(exp) ||
       (exp.note && (
         exp.note.includes("(เงินสด)") ||
@@ -326,7 +339,7 @@ function DailyPage({ theme }) {
 
     acc[key].details.push(exp);
     return acc;
-  }, {});
+    }, {});
 
   // 2. แปลงเป็น Array และเรียงลำดับหมวดหมู่ตามยอดเงิน (มากไปน้อย)
   const categoryList = Object.values(categorySummary).sort(
@@ -710,6 +723,9 @@ function DailyPage({ theme }) {
                           {isSavingsExpense(item) && (
                             <span className="item-funding-badge">เงินเก็บ</span>
                           )}
+                          {isSavingsDeposit(item) && (
+                            <span className="item-funding-badge">เข้าเงินเก็บ</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -731,7 +747,10 @@ function DailyPage({ theme }) {
                     return acc;
                   }, {})
                 ).map(([billId, items]) => {
-                  const billTotal = items.reduce((sum, item) => sum + (item.type === "income" ? parseFloat(item.amount) : -parseFloat(item.amount)), 0);
+                  const billTotal = items.reduce((sum, item) => {
+                    if (isSavingsDeposit(item)) return sum;
+                    return sum + (item.type === "income" ? parseFloat(item.amount) : -parseFloat(item.amount));
+                  }, 0);
                   return (
                     <div key={billId} style={{ marginBottom: '20px' , background: 'var(--soft)', padding: '10px', borderRadius: '8px'}}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid var(--soft)', paddingBottom: '5px', marginBottom: '10px' }}>
@@ -754,6 +773,9 @@ function DailyPage({ theme }) {
                                 <span className="item-cat">{item.category}</span>
                                 {isSavingsExpense(item) && (
                                   <span className="item-funding-badge">เงินเก็บ</span>
+                                )}
+                                {isSavingsDeposit(item) && (
+                                  <span className="item-funding-badge">เข้าเงินเก็บ</span>
                                 )}
                               </div>
                             </div>
@@ -963,7 +985,10 @@ function DailyPage({ theme }) {
               .filter((e) => e.type === "expense")
               .reduce((s, e) => s + parseFloat(e.amount), 0);
             const dayInc = dayItems
-              .filter((e) => e.type === "income")
+              .filter((e) => e.type === "income" && !isSavingsDeposit(e))
+              .reduce((s, e) => s + parseFloat(e.amount), 0);
+            const daySavings = dayItems
+              .filter(isSavingsDeposit)
               .reduce((s, e) => s + parseFloat(e.amount), 0);
             const isHighlighted = highlightedDays.has(day);
 
@@ -1019,6 +1044,9 @@ function DailyPage({ theme }) {
                 >
                   {dayInc > 0 && (
                     <span className="inc-tiny">{formatTiny(dayInc)}</span>
+                  )}
+                  {daySavings > 0 && (
+                    <span className="savings-tiny">🏦 {formatTiny(daySavings)}</span>
                   )}
                   {dayExp > 0 && (
                     <span className="exp-tiny">{formatTiny(dayExp)}</span>
@@ -1192,7 +1220,7 @@ function DailyPage({ theme }) {
                     <th>รายจ่าย</th>
                     <th>ใช้เงินเก็บ</th>
                     <th>คงเหลือ</th>
-                    <th>เงินเก็บเดือนก่อน (หลังหักที่ใช้)</th>
+                    <th>เงินเก็บก่อนรวมยอดคงเหลือ</th>
                     <th>เงินเก็บสะสม</th>
                   </tr>
                 </thead>
@@ -1698,6 +1726,7 @@ function DailyPage({ theme }) {
         }
         .inc-tiny { color: #059669; background: #d1fae5; border-radius: 6px; padding: 2px 4px; }
         .exp-tiny { color: #dc2626; background: #fee2e2; border-radius: 6px; padding: 2px 4px; }
+        .savings-tiny { color: #b45309; background: #fef3c7; border-radius: 6px; padding: 2px 4px; }
 
         .star-indicator {
           position: absolute;
@@ -2050,7 +2079,7 @@ function DailyPage({ theme }) {
             font-size: 0.6rem;
             gap: 2px;
           }
-          .inc-tiny, .exp-tiny {
+          .inc-tiny, .exp-tiny, .savings-tiny {
             padding: 1px 0;
             border-radius: 4px;
             width: 90%;
