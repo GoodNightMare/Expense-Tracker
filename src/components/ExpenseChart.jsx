@@ -21,43 +21,25 @@ ChartJS.register(
   Legend
 );
 
-const ExpenseChart = ({ expenses }) => {
-  // 1. Process data: Group and sum expenses by date
-  const dailyTotals = expenses.reduce((acc, expense) => {
-    // 1. แปลง String เป็น Date Object ก่อน
-    const dateObj = new Date(expense.date);
-    
-    // 2. ดึงเฉพาะเลขวันที่ (1-31)
-    // หรือถ้าอยากได้ "9 มี.ค." ให้ใช้ dateObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
-    const day = dateObj.getDate(); 
-
-    if (!acc[day]) {
-      acc[day] = 0;
-    }
-    acc[day] += Number(expense.amount);
-    return acc;
-  }, {});
-
-  // 2. Sort dates to ensure chronological order
-  const sortedDates = Object.keys(dailyTotals).sort(
-    (a, b) => new Date(a) - new Date(b)
-  );
-
-  const chartData = {
-    labels: sortedDates,
-    datasets: [
-      {
-        label: 'รายจ่ายรายวัน',
-        data: sortedDates.map(date => dailyTotals[date]),
-        fill: false,
-        borderColor: 'rgb(168, 0, 0)',
-        tension: 0.1,
-      },
-    ],
+const ExpenseChart = ({ expenses, comparisonExpenses = [], monthLabel = 'รายจ่ายรายวัน', comparisonLabel, daysInMonth = 31, comparisonDaysInMonth = 31 }) => {
+  const labels = Array.from({ length: Math.max(daysInMonth, comparisonLabel ? comparisonDaysInMonth : 0) }, (_, i) => i + 1);
+  const dataset = (items, label, days, color, dashed = false) => {
+    const totals = items.reduce((acc, item) => {
+      const day = new Date(item.date).getDate();
+      acc[day] = (acc[day] || 0) + (Number(item.amount) || 0);
+      return acc;
+    }, {});
+    return { label, data: labels.map(day => day <= days ? totals[day] || 0 : null),
+      fill: false, borderColor: color, backgroundColor: color, borderDash: dashed ? [6, 4] : [], tension: 0.1 };
   };
+  const chartData = { labels, datasets: [
+    dataset(expenses, monthLabel, daysInMonth, 'rgb(168, 0, 0)'),
+    ...(comparisonLabel ? [dataset(comparisonExpenses, comparisonLabel, comparisonDaysInMonth, 'rgb(59, 130, 246)', true)] : []),
+  ] };
 
   const options = {
     responsive: true,
+    interaction: { mode: 'index', intersect: false },
     plugins: {
       legend: {
         position: 'top',

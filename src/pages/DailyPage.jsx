@@ -25,6 +25,7 @@ import ExpenseChart from "../components/ExpenseChart";
 
 function DailyPage({ theme }) {
   const [expenses, setExpenses] = useState([]);
+  const [trendComparisonMonth, setTrendComparisonMonth] = useState("previous");
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [selectedDateData, setSelectedDateData] = useState(null); // เก็บข้อมูลวันที่ถูกคลิก
@@ -208,6 +209,25 @@ function DailyPage({ theme }) {
           exp.note.includes("(~)")))
     );
   };
+  const trendKey = trendComparisonMonth === "previous"
+    ? String(previousYear) + "-" + previousMonth : trendComparisonMonth;
+  const [trendYear, trendMonth] = trendKey.split("-").map(Number);
+  const trendLabel = thaiMonths[trendMonth] + " " + trendYear;
+  const trendOptions = [...new Set(expenses.map((exp) => {
+    const d = new Date(exp.date);
+    return Number.isNaN(d.getTime()) ? null : d.getFullYear() + "-" + d.getMonth();
+  }).filter(Boolean))].sort((a, b) => {
+    const [ay, am] = a.split("-").map(Number);
+    const [by, bm] = b.split("-").map(Number);
+    return by - ay || bm - am;
+  });
+  const trendExpenses = includedExpenses.filter((exp) => exp.type === "expense");
+  const trendComparisonExpenses = expenses.filter((exp) => {
+    const d = new Date(exp.date);
+    return d.getFullYear() === trendYear && d.getMonth() === trendMonth &&
+      exp.type === "expense" && isIncludedForComparison(exp);
+  });
+
   const getBalanceThroughDay = (year, month, throughDay) => expenses.reduce((sum, exp) => {
     const d = new Date(exp.date);
     if (
@@ -1179,31 +1199,22 @@ function DailyPage({ theme }) {
         <h3>
           📈 แนวโน้มค่าใช้จ่ายรายวัน ({thaiMonths[currentMonth]} {currentYear})
         </h3>
-        {filteredExpenses.filter(
-          (e) =>
-            e.type === "expense" &&
-            !exclusionList.includes(e.category) &&
-            !(e.note && e.note.includes("(ไม่ต้องคิด)")) &&
-            !(e.note && e.note.includes("(เงินสด)")) &&
-            !(e.note && e.note.includes("(~)")) &&
-            !isSavingsExpense(e),
-        ).length > 0 ? (
-          <ExpenseChart
-            expenses={filteredExpenses.filter(
-              (e) =>
-                e.type === "expense" &&
-                !exclusionList.includes(e.category) &&
-                !(e.note && e.note.includes("(ไม่ต้องคิด)")) &&
-                !(e.note && e.note.includes("(เงินสด)")) &&
-                !(e.note && e.note.includes("(~)")) &&
-                !isSavingsExpense(e),
-            )}
-          />
-        ) : (
-          <p style={{ textAlign: "center", padding: "20px" }}>
-            ไม่มีข้อมูลค่าใช้จ่ายในเดือนนี้
-          </p>
-        )}
+        <label style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+          เปรียบเทียบกับ
+          <select value={trendComparisonMonth} onChange={(e) => setTrendComparisonMonth(e.target.value)}
+            style={{ padding: "8px", borderRadius: "8px", background: "var(--card)", color: "var(--text)", border: "1px solid var(--border)" }}>
+            <option value="previous">เดือนก่อนหน้า ({thaiMonths[previousMonth]} {previousYear})</option>
+            {trendOptions.filter((key) => key !== currentYear + "-" + currentMonth).map((key) => {
+              const [year, month] = key.split("-").map(Number);
+              return <option key={key} value={key}>{thaiMonths[month]} {year}</option>;
+            })}
+          </select>
+        </label>
+        <ExpenseChart expenses={trendExpenses} comparisonExpenses={trendComparisonExpenses}
+          monthLabel={thaiMonths[currentMonth] + " " + currentYear} comparisonLabel={trendLabel}
+          daysInMonth={currentMonthDays} comparisonDaysInMonth={new Date(trendYear, trendMonth + 1, 0).getDate()} />
+        {trendExpenses.length === 0 && <p style={{ textAlign: "center" }}>ไม่มีข้อมูลค่าใช้จ่ายใน{thaiMonths[currentMonth]} {currentYear}</p>}
+        {trendComparisonExpenses.length === 0 && <p style={{ textAlign: "center" }}>ไม่มีข้อมูลค่าใช้จ่ายใน{trendLabel}</p>}
       </div>
 
       {/* 5. All Months Summary */}
