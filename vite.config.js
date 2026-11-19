@@ -11,9 +11,8 @@ export default defineConfig({
     host: true,
     proxy: {
       "/api": {
-        target: "https://expenses-backend-k65e.onrender.com",
+        target: "http://127.0.0.1:5000",
         changeOrigin: true,
-        secure: false,
         // ไม่ต้องมี rewrite เพราะ Backend ของคุณมี /api อยู่แล้ว
       },
     },

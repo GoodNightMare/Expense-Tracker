@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import axios from "axios";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Pie } from "react-chartjs-2";
@@ -6,6 +6,7 @@ import { Pie } from "react-chartjs-2";
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 import API_URL from "../api/index.js";
+import useRefreshOnFocus from "../hooks/useRefreshOnFocus.js";
 const thaiMonths = [
   "มกราคม",
   "กุมภาพันธ์",
@@ -25,9 +26,10 @@ import ExpenseChart from "../components/ExpenseChart";
 
 function DailyPage({ theme }) {
   const [expenses, setExpenses] = useState([]);
+  const [loadError, setLoadError] = useState("");
   const [trendComparisonMonth, setTrendComparisonMonth] = useState("previous");
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [currentYear] = useState(new Date().getFullYear());
   const [selectedDateData, setSelectedDateData] = useState(null); // เก็บข้อมูลวันที่ถูกคลิก
   const [dateViewMode, setDateViewMode] = useState("bill"); // State สำหรับรูปแบบการแสดงผลวันที่ (normal, bill)
   const [summaryModal, setSummaryModal] = useState(null); // State สำหรับ Summary Modal
@@ -41,20 +43,24 @@ function DailyPage({ theme }) {
 
   const today = new Date().toISOString().split("T")[0];
 
-  useEffect(() => {
-    fetchExpenses();
-  }, []);
-
-
-  const fetchExpenses = async () => {
+  const fetchExpenses = useCallback(async () => {
     try {
       // ต้องระบุชื่อ path ต่อท้าย เช่น /expenses
       const response = await axios.get(`${API_URL}/expenses`);
       setExpenses(response.data);
+      setLoadError("");
+      setSelectedDateData((selected) => {
+        if (!selected) return null;
+        const items = response.data.filter((item) => item.date === selected.date);
+        return items.length ? { ...selected, items } : null;
+      });
     } catch (err) {
       console.error(err);
+      setLoadError("โหลดข้อมูลล่าสุดไม่สำเร็จ กรุณาลองใหม่");
     }
-  };
+  }, []);
+
+  useRefreshOnFocus(fetchExpenses);
 
   // --- Logic การคำนวณ ---
   const exclusionList = ["ชาร์จรถ"];
@@ -89,12 +95,6 @@ function DailyPage({ theme }) {
     searchTerm
       ? searchedExpenses.map((exp) => new Date(exp.date).getDate())
       : [],
-  );
-
-  // รายการที่ต้องยกเว้นไม่ให้รวมในสรุป (เช่น ค่าชาร์จรถ)
-  // แยกข้อมูลที่ไม่เอามาคิดไว้ในอาร์เรย์เผื่อใช้งานภายหลัง
-  const excludedItems = filteredExpenses.filter((e) =>
-    exclusionList.includes(e.category),
   );
 
   // เราจะใช้ค่า includedExpenses สำหรับการคำนวณทั้งหมด
@@ -366,6 +366,10 @@ function DailyPage({ theme }) {
     (a, b) => b.total - a.total,
   );
 
+  const summaryModalItems = categoryList.filter(
+    (category) => category.type === summaryModal?.type && !exclusionList.includes(category.category),
+  );
+
   // 3. เรียงรายการย่อยในแต่ละหมวดหมู่ตามวันที่ (เก่า→ใหม่)
   categoryList.forEach((cat) => {
     cat.details.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -460,36 +464,14 @@ function DailyPage({ theme }) {
     }
   };
 
-  // ลบรายการโดย id
-  const handleDeleteItem = async (id) => {
-    try {
-      await axios.delete(`${API_URL}/expenses/${id}`);
-      // รีเฟรชข้อมูล
-      fetchExpenses();
-      // หาก modal แสดงรายการวันนั้นอยู่ อัปเดตด้วย
-      if (selectedDateData) {
-        const updated = filteredExpenses.filter((e) => e.id !== id);
-        const dayItems = updated.filter(
-          (e) => e.date === selectedDateData.date,
-        );
-        setSelectedDateData((prev) =>
-          prev ? { ...prev, items: dayItems } : null,
-        );
-      }
-    } catch (err) {
-      console.error("Error deleting item", err);
-    }
-  };
-
-  // wrapper ถามยืนยันก่อนลบ
-  const confirmDelete = (id) => {
-    if (window.confirm("ลบรายการนี้หรือไม่?")) {
-      handleDeleteItem(id);
-    }
-  };
-
   return (
     <div className="daily-container">
+      {loadError && (
+        <p role="alert" style={{ color: "#dc2626" }}>
+          {loadError}{" "}
+          <button type="button" onClick={fetchExpenses}>ลองใหม่</button>
+        </p>
+      )}
       {/* --- Help Modal --- */}
       {helpModalOpen && (
         <div className="modal-overlay" onClick={() => setHelpModalOpen(false)}>
@@ -658,7 +640,7 @@ function DailyPage({ theme }) {
               ) : (
                 // แสดง Breakdown ตามหมวดหมู่
                 <div className="summary-detail">
-                  {summaryModal.items.map((cat, i) => (
+                  {summaryModalItems.map((cat, i) => (
                     <details key={i} className="cat-details-summary">
                       <summary>
                         <span>{cat.category}</span>
@@ -872,14 +854,9 @@ function DailyPage({ theme }) {
           <div
             className="summary-card-item"
             onClick={() => {
-              const incomeCategories = categoryList.filter(
-                (c) =>
-                  c.type === "income" && !exclusionList.includes(c.category),
-              );
               setSummaryModal({
                 title: "📈 รายละเอียดรายรับ",
                 type: "income",
-                items: incomeCategories,
               });
             }}
           >
@@ -889,14 +866,9 @@ function DailyPage({ theme }) {
           <div
             className="summary-card-item"
             onClick={() => {
-              const expenseCategories = categoryList.filter(
-                (c) =>
-                  c.type === "expense" && !exclusionList.includes(c.category),
-              );
               setSummaryModal({
                 title: "📉 รายละเอียดรายจ่าย",
                 type: "expense",
-                items: expenseCategories,
               });
             }}
           >
@@ -909,7 +881,6 @@ function DailyPage({ theme }) {
               setSummaryModal({
                 title: "💳 สรุปคงเหลือ",
                 type: "balance",
-                items: [],
               });
             }}
           >
@@ -1174,7 +1145,6 @@ function DailyPage({ theme }) {
                   <div
                     key={d.id}
                     className="detail-item"
-                    // onClick={()=>confirmDelete(d.id)}
                   >
                     <span>
                       {new Date(d.date).getDate()}{" "}

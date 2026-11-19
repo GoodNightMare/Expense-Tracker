@@ -1,7 +1,8 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import axios from "axios";
 
 import API_URL from "../api/index.js";
+import useRefreshOnFocus from "../hooks/useRefreshOnFocus.js";
 
 const incomeCategories = ["เงินเดือน", "ลงทุน", "แฟน", "เทควันโด", "อื่นๆ"];
 const expenseCategories = [
@@ -28,22 +29,21 @@ function AddPage() {
   const [fundingSource, setFundingSource] = useState("salary");
   const [alert, setAlert] = useState(null);
   const [allExpenses, setAllExpenses] = useState([]);
+  const [loadError, setLoadError] = useState("");
   const [editId, setEditId] = useState(null); // State สำหรับเก็บ ID ที่กำลังแก้ไข
   const [deleteId, setDeleteId] = useState(null); // State to store the ID of the item to be deleted
 
   const [showDeleteModal, setShowDeleteModal] = useState(false); // State สำหรับควบคุมการแสดง Modal
   const [deleteConfirmation, setDeleteConfirmation] = useState(""); // State สำหรับเก็บข้อความยืนยันการลบ
+  const [deleteError, setDeleteError] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // States for filtering
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterDate, setFilterDate] = useState("");
   const [filterLimit, setFilterLimit] = useState(10);
 
-  useEffect(() => {
-    fetchAllExpenses();
-  }, []);
-
-  const fetchAllExpenses = async () => {
+  const fetchAllExpenses = useCallback(async () => {
     try {
       const res = await axios.get(`${API_URL}/expenses`);
       const sorted = res.data.sort((a, b) => {
@@ -51,10 +51,14 @@ function AddPage() {
         return (b.id || 0) - (a.id || 0);
       });
       setAllExpenses(sorted);
+      setLoadError("");
     } catch (err) {
       console.error("Error:", err);
+      setLoadError("โหลดข้อมูลล่าสุดไม่สำเร็จ กรุณาลองใหม่");
     }
-  };
+  }, []);
+
+  useRefreshOnFocus(fetchAllExpenses);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -93,31 +97,60 @@ function AddPage() {
       fetchAllExpenses();
 
       setTimeout(() => setAlert(null), 3000);
-    } catch (err) {
+    } catch {
       setAlert({ type: "error", message: "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง" });
     }
   };
 
   const handleDeleteClick = (id) => {
     setDeleteId(id);
+    setDeleteConfirmation("");
+    setDeleteError("");
     setShowDeleteModal(true);
   };
 
+  const handleCloseDelete = () => {
+    if (isDeleting) return;
+    setShowDeleteModal(false);
+    setDeleteId(null);
+    setDeleteConfirmation("");
+    setDeleteError("");
+  };
+
   const handleConfirmDelete = async () => {
-    if (!deleteId) return;
+    if (!deleteId || !deleteConfirmation || isDeleting) return;
+    setIsDeleting(true);
+    setDeleteError("");
 
     try {
-      await axios.delete(`${API_URL}/expenses/${deleteId}`, {
+      const response = await axios.delete(`${API_URL}/expenses/${deleteId}`, {
         data: { id: deleteId, password: deleteConfirmation },
       });
-      fetchAllExpenses();
-      setAlert({ type: "success", message: "ลบสำเร็จ! 🗑️" });
+      await fetchAllExpenses();
+      setAllExpenses((items) => items.filter((item) => item.id !== deleteId));
+      setAlert({
+        type: "success",
+        message: response.data.alreadyDeleted
+          ? "รายการนี้ถูกลบไปแล้ว"
+          : "ลบสำเร็จ! 🗑️",
+      });
       setTimeout(() => setAlert(null), 3000);
-    } catch (err) {
-      setAlert({ type: "error", message: "ลบไม่สำเร็จ กรุณาลองใหม่" });
-    } finally {
       setShowDeleteModal(false);
       setDeleteId(null);
+      setDeleteConfirmation("");
+    } catch (err) {
+      if (err.response?.status === 404) {
+        await fetchAllExpenses();
+        setAllExpenses((items) => items.filter((item) => item.id !== deleteId));
+        setAlert({ type: "success", message: "รายการนี้ถูกลบไปแล้ว" });
+        setShowDeleteModal(false);
+        setDeleteId(null);
+        setDeleteConfirmation("");
+      } else {
+        setDeleteError(err.response?.data?.error || "ลบไม่สำเร็จ กรุณาลองใหม่");
+      }
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -169,24 +202,44 @@ function AddPage() {
 
   return (
     <div className="add-page">
+      {loadError && (
+        <div className="alert alert-error" role="alert">
+          {loadError}{" "}
+          <button type="button" className="mini-btn" onClick={fetchAllExpenses}>ลองใหม่</button>
+        </div>
+      )}
       {showDeleteModal && (
-        <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
+        <div className="modal-overlay" onClick={handleCloseDelete}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h3 className="modal-title">⚠️ ยืนยันการลบ</h3>
-            <p className="modal-desc">พิมพ์ "รหัส" เพื่อทำรายการลบ</p>
+            <p className="modal-desc" id="delete-confirmation-help">กรอกรหัสยืนยันการลบที่ตั้งไว้</p>
 
             <input
-              type="text"
+              type="password"
               className="modal-input"
-              placeholder="พิมพ์ 'รหัส' เพื่อลบ..."
-              onChange={(e) => setDeleteConfirmation(e.target.value)}
+              placeholder="รหัสยืนยันการลบ"
+              aria-label="รหัสยืนยันการลบ"
+              aria-describedby={deleteError ? "delete-confirmation-help delete-confirmation-error" : "delete-confirmation-help"}
+              aria-invalid={Boolean(deleteError)}
+              autoComplete="off"
+              value={deleteConfirmation}
+              disabled={isDeleting}
+              onChange={(e) => {
+                setDeleteConfirmation(e.target.value);
+                setDeleteError("");
+              }}
             />
+
+            {deleteError && (
+              <div id="delete-confirmation-error" className="alert alert-error" role="alert">{deleteError}</div>
+            )}
 
             <div className="modal-actions">
               <button
                 type="button"
-                onClick={() => setShowDeleteModal(false)}
+                onClick={handleCloseDelete}
                 className="modal-btn cancel-btn"
+                disabled={isDeleting}
               >
                 ยกเลิก
               </button>
@@ -194,8 +247,9 @@ function AddPage() {
                 type="button"
                 onClick={handleConfirmDelete}
                 className="modal-btn confirm-btn"
+                disabled={isDeleting || !deleteConfirmation}
               >
-                ยืนยันการลบ
+                {isDeleting ? "กำลังลบ..." : "ยืนยันการลบ"}
               </button>
             </div>
           </div>
